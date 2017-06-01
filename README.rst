@@ -28,7 +28,7 @@ returns a dict with the result of each task in the original graph.
 
 The DAG is represented by a python dict of vertices where each key is the ID of
 a task and each value is a triple of (function, args or kwargs, computation
-cost). Edges are implicitly defined by instances of the ``Dependency``-class in
+cost). Edges are implicitly defined by instances of the ``Dependency`` class in
 the args or kwargs.
 
 A simple usage example computing (3^2 + 4^2) - (3^2 * 10/12):
@@ -54,6 +54,6 @@ The Dependency class
 A dependency is a triple of (task ID or index, key (if any) and communication
 cost). The key may be a single key, index or slice, or it may be an iterable of
 such values to be applied in sequence. For example, the key ``('values', 2)``
-extracts the value 5 from the dict ``{'values': [1, 3, 5]}``. Dependency-
+extracts the value 5 from the dict ``{'values': [1, 3, 5]}``. Dependency 
 instances are created by limp.Dependency(task, key, cost) where cost is
 optional and defaults to 0.
