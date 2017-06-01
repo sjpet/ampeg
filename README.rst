@@ -55,5 +55,5 @@ A dependency is a triple of (task ID or index, key (if any) and communication
 cost). The key may be a single key, index or slice, or it may be an iterable of
 such values to be applied in sequence. For example, the key ``('values', 2)``
 extracts the value 5 from the dict ``{'values': [1, 3, 5]}``. Dependency 
-instances are created by limp.Dependency(task, key, cost) where cost is
+instances are created using ``limp.Dependency(task, key, cost)`` where cost is
 optional and defaults to 0.
