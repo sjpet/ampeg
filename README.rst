@@ -31,7 +31,7 @@ a task and each value is a triple of (function, args or kwargs, computation
 cost). Edges are implicitly defined by instances of the ``Dependency`` class in
 the args or kwargs.
 
-A simple usage example computing (3^2 + 4^2) - (3^2 * 10/12):
+A simple usage example computing (3^2 + 4^2) - (3^2 * 10/2):
 
 >>> import limp
 >>> n_processes = 3
@@ -44,7 +44,7 @@ A simple usage example computing (3^2 + 4^2) - (3^2 * 10/12):
                                        limp.Dependency(2, None, 1)), 10.8),
                 5: (lambda x, y: x - y, (limp.Dependency(3, None, 1),
                                          limp.Dependency(4, None, 1)), 10.9)}
->>> task_lists, task_ids = limp.earliest_finish_time(graph, n_processes)
+>>> task_lists, task_ids = limp.earliest_finish_time(my_graph, n_processes)
 >>> limp.execute_task_lists(task_lists, task_ids)
 {0: 9, 1: 16, 2: 5, 3: 25, 4: 45, 5: -20}
 
