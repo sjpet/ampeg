@@ -49,6 +49,7 @@ computation_costs_1 = {'stats_0': 13,
                        5: 75,
                        6: 75,
                        'final': 42}
+
 communication_costs_1 = {'stats_0': [],
                          'stats_1': [],
                          2: [],
@@ -99,6 +100,33 @@ task_ids_1 = [['stats_1', None, None, 4, None, 5, None, 'final'],
               ['stats_0', None, None, None, 6, None],
               [2, None],
               [3, None]]
+
+test_graph_2 = {0: (square, {'x': test_x[0]}, 13),
+                1: (square, {'x': test_x[0]}, 16),
+                2: (stats, {'x': limp.Dependency(0, None, 4)}, 28),
+                3: (stats, {'x': limp.Dependency(1, None, 2)}, 21),
+                4: (normalize,
+                    {'x': test_x[0],
+                     'mu': limp.Dependency(2, ('dummy', 'mu'), 5),
+                     'var': limp.Dependency(2, ('dummy', 'var'), 5)}, 17),
+                5: (normalize,
+                    {'x': test_x[1],
+                     'mu': limp.Dependency(3, ('dummy', 'mu'), 8),
+                     'var': limp.Dependency(3, ('dummy', 'var'), 8)}, 22),
+                6: (stats, {'x': limp.Dependency(1, None, 3)}, 15)}
+
+reduced_graph_1 = {0: (square, {'x': test_x[0]}, 16),
+                   2: (stats, {'x': limp.Dependency(0, None, 4)}, 28),
+                   4: (normalize,
+                       {'x': test_x[0],
+                        'mu': limp.Dependency(2, ('dummy', 'mu'), 5),
+                        'var': limp.Dependency(2, ('dummy', 'var'), 5)}, 17),
+                   5: (normalize,
+                       {'x': test_x[1],
+                        'mu': limp.Dependency(2, ('dummy', 'mu'), 8),
+                        'var': limp.Dependency(2, ('dummy', 'var'), 8)}, 22)}
+
+multiplexing_keys_1 = {0: [1], 2: [3, 6]}
 
 
 # ## Tests for helper functions
@@ -238,9 +266,18 @@ def test_relabel_dependencies_iterable():
     assert limp.scheduling.relabel_dependencies(args, labels) == new_args
 
 
+def test_remove_duplicates():
+    reduced_graph, multiplexing_keys = \
+        limp.scheduling.remove_duplicates(test_graph_2)
+    assert reduced_graph == reduced_graph_1
+    assert multiplexing_keys == multiplexing_keys_1
+
+
 def test_eft():
-    task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
+    task_lists, task_ids, multiplexing_keys = \
+        limp.earliest_finish_time(test_graph_1, 4)
 
     task_lists_functions_only = [[f for f, _ in q] for q in task_lists]
     assert task_lists_functions_only == task_lists_functions_only_1
     assert task_ids == task_ids_1
+    assert multiplexing_keys == {}

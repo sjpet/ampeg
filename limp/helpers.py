@@ -23,3 +23,24 @@ def is_iterable(x):
     """
 
     return (not isinstance(x, str)) and hasattr(x, '__iter__')
+
+
+def reverse_graph(graph):
+    """Reverse a directed graph.
+
+    Parameters
+    ----------
+    graph : dict
+        A graph on the form {node: [successor]}
+
+    Returns
+    -------
+    dict
+        A graph with all directions reversed
+    """
+    graph_ = {vertex: [] for vertex in graph}
+    for vertex, successors in graph.items():
+        for vertex_ in successors:
+            graph_[vertex_].append(vertex)
+
+    return graph_

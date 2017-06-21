@@ -109,20 +109,23 @@ def execute_task_list(task_list, lock=None, pipe=None):
     return results
 
 
-def execute_task_lists(task_lists, task_ids=None):
+def execute_task_lists(task_lists, task_ids=None, multiplexing_keys=None):
     """Execute a number of task list over equally many processes.
 
     Parameters
     ----------
     task_lists : [[(function, kwargs)]]
         A nested list of tasks and their kwargs
-    task_ids : Optional[ [[task_id]] ]
+    task_ids : [[task_id]], optional
         A nested list of task_ids to sort execution results
+    multiplexing_keys : dict, optional
+        A dict of keys to multiplex in the final result dict
 
     Returns
     -------
-    [[dict]]
-        A nested list of result dicts
+    [[dict]] or dict
+        A nested list of result dicts or, if task_ids where given, a single
+        result dict
     """
 
     n_processes = len(task_lists)
@@ -158,7 +161,15 @@ def execute_task_lists(task_lists, task_ids=None):
 
     if task_ids is None:
         return results
+
     else:
-        return {task: result for k in range(n_processes)
-                for task, result in zip(task_ids[k], results[k]) if
-                task is not None}
+        results_ = {task: result for k in range(n_processes)
+                    for task, result in zip(task_ids[k], results[k]) if
+                    task is not None}
+
+        if multiplexing_keys is not None:
+            for key, additional_keys in multiplexing_keys:
+                for key_ in additional_keys:
+                    results_[key_] = results_[key]
+
+        return results_

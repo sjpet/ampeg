@@ -7,7 +7,7 @@
 import multiprocessing as mp
 
 from .classes import Dependency
-from .helpers import (inf, is_iterable)
+from .helpers import (inf, is_iterable, reverse_graph)
 
 
 # ## Helper functions
@@ -98,7 +98,10 @@ def relabel_dependencies(args, labels):
         for (key, val) in args.items():
             if isinstance(val, Dependency):
                 predecessor, key_, cost = val
-                new_args[key] = Dependency(labels[predecessor], key_, cost)
+                if predecessor in labels:
+                    new_args[key] = Dependency(labels[predecessor], key_, cost)
+                else:
+                    new_args[key] = val
             elif is_iterable(val):
                 new_args[key] = relabel_dependencies(val, labels)
             else:
@@ -174,6 +177,23 @@ def successor_graph(graph):
     return {key: [key_ for (key_, val_) in graph.items()
                   if key in list_dependencies(val_[1])]
             for (key, val) in graph.items()}
+
+
+def predecessor_graph(graph):
+    """
+
+    Parameters
+    ----------
+    graph : dict
+        A directed acyclic graph representing the computations where each
+        vertex represents a computational task
+
+    Returns
+    -------
+    dict
+        A simplified graph including showing only successor tasks for each task
+    """
+    return reverse_graph(successor_graph(graph))
 
 
 def list_communication_costs(args):
@@ -496,6 +516,75 @@ def est(task,
     return max(est_candidates)
 
 
+# ## Preprocessing functions
+
+def remove_duplicates(graph):
+    """Remove duplicate tasks from a graph.
+
+    Parameters
+    ----------
+    graph : dict
+        A directed acyclic graph representing the computations where each
+        vertex represents a computational task
+
+    Returns
+    -------
+    dict
+        An equivalent graph without duplicates
+    dict
+        A dict of multiplexing keys from the shortened to the original graph
+    """
+
+    graph_ = graph.copy()
+
+    successors = successor_graph(graph_)
+    predecessors = predecessor_graph(graph_)
+
+    reduced_graph = {}
+    multiplexing_keys = {}
+    this_tier = [key for key, p in predecessors.items() if not p]
+
+    while this_tier:
+        for key in this_tier:
+            val = graph_[key]
+            existing_key = None
+            for key_, val_ in reduced_graph.items():
+                if val[:2] == val_[:2]:
+                    existing_key = key_
+                    break
+            if existing_key is None:
+                reduced_graph[key] = val
+
+            else:
+                # Use maximum cost
+                reduced_graph[existing_key] = (
+                    val[0],
+                    val[1],
+                    max(val[2], reduced_graph[existing_key][2]))
+
+                # Update dependencies of successors
+                for successor in successors[key]:
+                    val_ = graph_[successor]
+                    graph_[successor] = (
+                        val_[0],
+                        relabel_dependencies(val_[1], {key: existing_key}),
+                        val_[2])
+
+                if existing_key in multiplexing_keys:
+                    multiplexing_keys[existing_key].append(key)
+                else:
+                    multiplexing_keys[existing_key] = [key]
+
+            predecessors.pop(key)
+            for key_ in predecessors:
+                if key in predecessors[key_]:
+                    predecessors[key_].remove(key)
+
+            this_tier = [key for key, p in predecessors.items() if not p]
+
+    return reduced_graph, multiplexing_keys
+
+
 # ## Glue functions
 
 def send(result, pipe):
@@ -632,16 +721,21 @@ def earliest_finish_time(graph, n_processes):
     Returns
     -------
     [[(function, kwargs)]]
-        A list of task lists
-
+        A set of task lists
+    [[task_id]]
+        A nested list for mapping execution results to task IDs
+    dict
+        A dict of multiplexing keys
     """
 
-    computation_costs, communication_costs = costs(graph)
+    graph_, multiplexing_keys = remove_duplicates(graph)
 
-    graph_ = successor_graph(graph)
-    ranks = upward_rank(graph)
+    computation_costs, communication_costs = costs(graph_)
 
-    task_ids = [task for task in graph.keys()]
+    predecessors = predecessor_graph(graph_)
+    ranks = upward_rank(graph_)
+
+    task_ids = [task for task in graph_.keys()]
     ranks_ = [ranks[task] for task in task_ids]
 
     task_priority = [task_ids[k] for k in sorted(range(len(task_ids)),
@@ -651,11 +745,12 @@ def earliest_finish_time(graph, n_processes):
 
     while not task_priority == []:
         next_task = task_priority.pop()
-        predecessors = [key for (key, s) in graph_.items() if next_task in s]
         schedule = add_task_eft(next_task,
-                                predecessors,
+                                predecessors[next_task],
                                 computation_costs,
                                 communication_costs,
                                 schedule)
 
-    return generate_task_lists(graph, schedule)
+    task_lists, task_ids = generate_task_lists(graph_, schedule)
+
+    return task_lists, task_ids, multiplexing_keys

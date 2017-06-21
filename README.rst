@@ -22,9 +22,10 @@ Usage
 Limp exposes a scheduling function ``earliest_finish_time``, an execution
 function ``execute_task_lists`` and a class ``Dependency``. The former takes a
 directed acyclic graph (DAG) and a number of processes and produces a set of
-task lists for each process and a corresponding set of task IDs for translating
-the execution result. These two form the input to ``execute_task_lists``, which
-returns a dict with the result of each task in the original graph.
+task lists for each process, a corresponding set of task IDs for translating
+the execution result and a dict of multiplexing keys. These three form the
+input to ``execute_task_lists``, which returns a dict with the result of each
+task in the original graph.
 
 The DAG is represented by a python dict of vertices where each key is the ID of
 a task and each value is a triple of (function, args or kwargs, computation
