@@ -9,6 +9,7 @@ computational tasks over multiple processes using the multiprocessing package.
 Requirements
 ------------
 Python 2.6 or later
+
 Python 3.3 or later
 
 Installation
