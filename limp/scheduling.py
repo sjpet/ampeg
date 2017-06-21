@@ -351,6 +351,38 @@ def generate_task_lists(graph, schedule):
     return task_lists, task_ids
 
 
+def multiplex_task_ids(task_ids, multiplexing_keys):
+    """Multiplex task ids.
+
+    Parameters
+    ----------
+    task_ids : [[task_id]]
+        A nested list for mapping execution results to task IDs
+    multiplexing_keys : dict
+        A dict of multiplexing keys
+
+    Returns
+    -------
+    [[task_id or (task_id,)]]
+        A nested list for mapping execution results to task IDs, including
+        multiplexed tasks
+    """
+
+    task_ids_ = [[p for p in q] for q in task_ids]
+
+    if multiplexing_keys == {}:
+        return task_ids_
+
+    for k in range(len(task_ids_)):
+        for kk in range(len(task_ids_[k])):
+            this_task_id = task_ids_[k][kk]
+            if this_task_id in multiplexing_keys:
+                task_ids_[k][kk] = (this_task_id,
+                                    *multiplexing_keys[this_task_id])
+
+    return task_ids_
+
+
 def idle_slots(schedule):
     """List the idle time slots in a single processor schedule.
 
@@ -722,10 +754,8 @@ def earliest_finish_time(graph, n_processes):
     -------
     [[(function, kwargs)]]
         A set of task lists
-    [[task_id]]
+    [[task_id or [task_id]]]
         A nested list for mapping execution results to task IDs
-    dict
-        A dict of multiplexing keys
     """
 
     graph_, multiplexing_keys = remove_duplicates(graph)
@@ -753,4 +783,4 @@ def earliest_finish_time(graph, n_processes):
 
     task_lists, task_ids = generate_task_lists(graph_, schedule)
 
-    return task_lists, task_ids, multiplexing_keys
+    return task_lists, multiplex_task_ids(task_ids, multiplexing_keys)

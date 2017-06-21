@@ -146,7 +146,15 @@ def test_expand_args_dict_no_dependencies():
 # Execution tests
 
 def test_execution():
-    task_lists, task_ids, multiplexing_keys = \
-        limp.earliest_finish_time(test_graph_1, 4)
-    results = limp.execute_task_lists(task_lists, task_ids, multiplexing_keys)
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
+    results = limp.execute_task_lists(task_lists, task_ids)
     assert results == results_1
+
+
+def test_execution_multiplexing():
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
+    task_ids[0][0] = [task_ids[0][0], 'stats_2']
+    results_1_ = results_1.copy()
+    results_1_['stats_2'] = results_1_['stats_1']
+    results = limp.execute_task_lists(task_lists, task_ids)
+    assert results == results_1_

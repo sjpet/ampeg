@@ -274,10 +274,8 @@ def test_remove_duplicates():
 
 
 def test_eft():
-    task_lists, task_ids, multiplexing_keys = \
-        limp.earliest_finish_time(test_graph_1, 4)
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
 
     task_lists_functions_only = [[f for f, _ in q] for q in task_lists]
     assert task_lists_functions_only == task_lists_functions_only_1
     assert task_ids == task_ids_1
-    assert multiplexing_keys == {}
