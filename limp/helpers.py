@@ -44,3 +44,46 @@ def reverse_graph(graph):
             graph_[vertex_].append(vertex)
 
     return graph_
+
+
+def equivalent_args(args_0, args_1):
+    """Compare args in a way that handles problematic types such as numpy
+    arrays.
+
+    Parameters
+    ----------
+    args_0
+    args_1
+
+    Returns
+    -------
+    bool
+    """
+
+    if isinstance(args_0, dict):
+        if isinstance(args_1, dict):
+            for key in args_0:
+                if key not in args_1:
+                    return False
+                elif equivalent_args(args_0[key], args_1[key]) is False:
+                    return False
+            for key in args_1:
+                if key not in args_0:
+                    return False
+        else:
+            return False
+
+    elif is_iterable(args_0):
+        if is_iterable(args_1):
+            try:
+                return args_0 == args_1
+            except ValueError:
+                return all(args_0 == args_1)
+        else:
+            return False
+
+    else:
+        print(args_0 == args_1)
+        return args_0 == args_1
+
+    return True

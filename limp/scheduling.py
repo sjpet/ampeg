@@ -7,7 +7,7 @@
 import multiprocessing as mp
 
 from .classes import Dependency
-from .helpers import (inf, is_iterable, reverse_graph)
+from .helpers import (inf, is_iterable, reverse_graph, equivalent_args)
 
 
 # ## Helper functions
@@ -581,7 +581,7 @@ def remove_duplicates(graph):
             val = graph_[key]
             existing_key = None
             for key_, val_ in reduced_graph.items():
-                if val[:2] == val_[:2]:
+                if val[0] == val_[0] and equivalent_args(val[1], val_[1]):
                     existing_key = key_
                     break
             if existing_key is None:
