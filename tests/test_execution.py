@@ -60,6 +60,15 @@ results_1 = {'stats_0': stats_0,
              6: norm_1,
              'final': diff(norm_0['y'], norm_1['y'])}
 
+costs_1 = {'stats_0': (None, {}),
+           'stats_1': (None, {}),
+           2: (None, {}),
+           3: (None, {}),
+           4: (None, {'stats_0': None}),
+           5: (None, {2: None}),
+           6: (None, {'stats_1': None, 3: None}),
+           'final': (None, {6: None})}
+
 
 # Dependency expansion tests
 
@@ -76,61 +85,61 @@ def test_expand_recursively_nested_dict():
 
 
 def test_expand_args_single_result():
-    results = [None, None, 7]
+    results = [(None,), (None,), (7,)]
     args = (limp.Dependency(2, None),)
     assert limp.execution.expand_args(args, results) == (7,)
 
 
 def test_expand_arg_dict_key():
-    results = [None, None, {'a': 8}]
+    results = [(None,), (None,), ({'a': 8},)]
     args = (limp.Dependency(2, 'a'),)
     assert limp.execution.expand_args(args, results) == (8,)
 
 
 def test_expand_arg_iterable_index():
-    results = [None, None, [6, 9, 2]]
+    results = [(None,), (None,), ([6, 9, 2],)]
     args = (limp.Dependency(2, 1),)
     assert limp.execution.expand_args(args, results) == (9,)
 
 
 def test_expand_arg_nested_keys():
-    results = [None, None, {'a': [8, 9, 10]}]
+    results = [(None,), (None,), ({'a': [8, 9, 10]},)]
     args = (limp.Dependency(2, ('a', 2)),)
     assert limp.execution.expand_args(args, results) == (10,)
 
 
 def test_expand_arg_no_dependency():
-    results = [None, None, 7]
+    results = [(None,), (None,), (7,)]
     args = (42,)
     assert limp.execution.expand_args(args, results) == args
 
 
 def test_expand_args_iterable_no_dependency():
-    results = [None, None, 7]
+    results = [(None,), (None,), (7,)]
     args = ([1, 2, 3, 4],)
     assert limp.execution.expand_args(args, results) == args
 
 
 def test_expand_args_dict():
-    results = [{'a': 6}, None, None, 8]
+    results = [({'a': 6},), (None,), (None,), (8,)]
     args = {'x': limp.Dependency(0, 'a'), 'y': limp.Dependency(3, None)}
     assert limp.execution.expand_args(args, results) == {'x': 6, 'y': 8}
 
 
 def test_expand_args_list():
-    results = [{'a': 6}, None, None, 8]
+    results = [({'a': 6},), (None,), (None,), (8,)]
     args = [limp.Dependency(0, 'a'), limp.Dependency(3, None)]
     assert limp.execution.expand_args(args, results) == [6, 8]
 
 
 def test_expand_args_iterable_mixed():
-    results = [{'a': 6}, None, None, 8]
+    results = [({'a': 6},), (None,), (None,), (8,)]
     args = [limp.Dependency(0, 'a'), 63, (limp.Dependency(3, None), 5)]
     assert limp.execution.expand_args(args, results) == [6, 63, (8, 5)]
 
 
 def test_expand_args_nested_dict():
-    results = [{'a': 6}, None, None, 8]
+    results = [({'a': 6},), (None,), (None,), (8,)]
     args = {'stage_0': {'x': limp.Dependency(0, 'a'),
                         'y': limp.Dependency(3, None)}}
     expanded_args = {'stage_0': {'x': 6, 'y': 8}}
@@ -138,7 +147,7 @@ def test_expand_args_nested_dict():
 
 
 def test_expand_args_dict_no_dependencies():
-    results = [{'a': 6}, None, None, 8]
+    results = [({'a': 6},), (None,), (None,), (8,)]
     args = {'x': 4, 'y': 2}
     assert limp.execution.expand_args(args, results) == args
 
@@ -151,6 +160,19 @@ def test_execution():
     assert results == results_1
 
 
+def test_execution_costs():
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
+    results = limp.execute_task_lists(task_lists, task_ids, costs=True)
+    costs = results.pop('costs')
+    assert results == results_1
+    assert set(costs.keys()) == set(costs_1.keys())
+    for key in costs.keys():
+        assert costs[key][0] > 0.0
+        assert set(costs[key][1].keys()) == set(costs_1[key][1].keys())
+        for key_ in costs[key][1].keys():
+            assert costs[key][1][key_] > 0.0
+
+
 def test_execution_multiplexing():
     task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
     task_ids[0][0] = [task_ids[0][0], 'stats_2']
@@ -158,3 +180,21 @@ def test_execution_multiplexing():
     results_1_['stats_2'] = results_1_['stats_1']
     results = limp.execute_task_lists(task_lists, task_ids)
     assert results == results_1_
+
+
+def test_execution_multiplexing_costs():
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
+    task_ids[0][0] = [task_ids[0][0], 'stats_2']
+    results_1_ = results_1.copy()
+    results_1_['stats_2'] = results_1_['stats_1']
+    costs_1_ = costs_1.copy()
+    costs_1_['stats_2'] = costs_1_['stats_1']
+    results = limp.execute_task_lists(task_lists, task_ids, costs=True)
+    costs = results.pop('costs')
+    assert results == results_1_
+    assert set(costs.keys()) == set(costs_1_.keys())
+    for key in costs.keys():
+        assert costs[key][0] > 0.0
+        assert set(costs[key][1].keys()) == set(costs_1_[key][1].keys())
+        for key_ in costs[key][1].keys():
+            assert costs[key][1][key_] > 0.0

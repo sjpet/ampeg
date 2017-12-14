@@ -6,8 +6,12 @@
 
 import multiprocessing as mp
 
-from .classes import Dependency
-from .helpers import (inf, is_iterable, reverse_graph, equivalent_args)
+from .classes import (Dependency, Communication)
+from .helpers import (inf,
+                      is_iterable,
+                      reverse_graph,
+                      equivalent_args,
+                      demux)
 
 
 # ## Helper functions
@@ -297,8 +301,8 @@ def generate_task_lists(graph, schedule):
                     for slot in schedule[process]}
 
     successor_processes = \
-        {key: list(set(task_process[task] for task in val
-                       if not task_process[task] == task_process[key]))
+        {key: demux((task_process[task], task) for task in val
+                    if not task_process[task] == task_process[key])
          for key, val in successor_graph(graph).items()}
 
     # Flatten the schedule and sort by finish time (reverse order)
@@ -319,12 +323,12 @@ def generate_task_lists(graph, schedule):
         # Add any queued receive tasks
         removals = []
         for k in range(len(receive_queue[process])):
-            task_, process_, finish_ = receive_queue[process][k]
+            task_, process_, finish_, own_tasks = receive_queue[process][k]
             if finish_ < start:
                 task_indices[process][task_] = len(task_lists[process])
                 task_lists[process].append((receive,
                                             {'pipe': pipes[process][process_]}))
-                task_ids[process].append(None)
+                task_ids[process].append(Communication(task_, own_tasks))
                 removals.append(k)
 
         receive_queue[process] = [receive_queue[process][k]
@@ -341,12 +345,12 @@ def generate_task_lists(graph, schedule):
         task_indices[process][this_task] = task_index
 
         # Add any required send tasks
-        for k in successor_processes[this_task]:
+        for (p, ts) in successor_processes[this_task]:
             task_lists[process].append((send, {'result': Dependency(task_index,
                                                                     None),
-                                               'pipe': pipes[process][k]}))
-            task_ids[process].append(None)
-            receive_queue[k].append((this_task, process, finish))
+                                               'pipe': pipes[process][p]}))
+            task_ids[process].append(Communication(this_task, ts))
+            receive_queue[p].append((this_task, process, finish, ts))
 
     return task_lists, task_ids
 
@@ -377,8 +381,7 @@ def multiplex_task_ids(task_ids, multiplexing_keys):
         for kk in range(len(task_ids_[k])):
             this_task_id = task_ids_[k][kk]
             if this_task_id in multiplexing_keys:
-                task_ids_[k][kk] = (this_task_id,
-                                    *multiplexing_keys[this_task_id])
+                task_ids_[k][kk] = (this_task_id,) + multiplexing_keys[this_task_id]
 
     return task_ids_
 
@@ -711,8 +714,8 @@ def upward_rank(graph):
 
     computation_costs, communication_costs = costs(graph)
 
-    mean_communication_costs = {k: sum(c for _, c in t)/len(t) if t else 0
-                                for k, t in communication_costs.items()}
+    mean_communication_costs = {k: sum(c for _, c in t)/float(len(t)) if t
+                                else 0 for k, t in communication_costs.items()}
 
     graph_ = successor_graph(graph)
 
@@ -746,7 +749,12 @@ def earliest_finish_time(graph, n_processes):
     ----------
     graph : dict
         A directed acyclic graph representing the computations where each
-        vertex represents a computational task
+        vertex represents a computational task. The graph is represented by a
+        dict with task IDs as keys and tuples of
+        (function, parameters, computational cost) as values. `parameters` can
+        be dict or another iterable containing any mix of concrete values and
+        `Dependency` instances.
+
     n_processes : Int
         Number of processes to use
 

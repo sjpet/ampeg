@@ -14,3 +14,10 @@ class Dependency(tuple):
 
     def __eq__(self, other):
         return (self[0], self[1]) == (other[0], other[1])
+
+
+class Communication(tuple):
+    """A simple (sender, recipients) tuple, implemented as a new subclass for
+    distinction."""
+    def __new__(cls, sender, recipients):
+        return tuple.__new__(cls, (sender, recipients))

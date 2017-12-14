@@ -96,10 +96,29 @@ task_lists_functions_only_1 = [[stats,
                                [square,
                                 limp.scheduling.send]]
 
-task_ids_1 = [['stats_1', None, None, 4, None, 5, None, 'final'],
+task_ids_1_ = [['stats_1', None, None, 4, None, 5, None, 'final'],
               ['stats_0', None, None, None, 6, None],
               [2, None],
               [3, None]]
+
+task_ids_1 = [['stats_1',
+               ('stats_1', [6]),
+               ('stats_0', [4]),
+               4,
+               (2, [5]),
+               5,
+               (6, ['final']),
+               'final'],
+              ['stats_0',
+               ('stats_0', [4]),
+               (3, [6]),
+               ('stats_1', [6]),
+               6,
+               (6, ['final'])],
+              [2,
+               (2, [5])],
+              [3,
+               (3, [6])]]
 
 test_graph_2 = {0: (square, {'x': test_x[0]}, 13),
                 1: (square, {'x': test_x[0]}, 16),
@@ -219,7 +238,10 @@ def test_successor_graph():
 def test_costs():
     x, y = limp.scheduling.costs(test_graph_1)
     assert x == computation_costs_1
-    assert y == communication_costs_1
+    # assert y == communication_costs_1
+    assert set(y.keys()) == set(communication_costs_1.keys())
+    for key in y.keys():
+        assert set(y[key]) == set(communication_costs_1[key])
 
 
 def test_idle_slots():

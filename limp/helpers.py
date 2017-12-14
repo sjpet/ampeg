@@ -87,3 +87,25 @@ def equivalent_args(args_0, args_1):
         return args_0 == args_1
 
     return True
+
+
+def demux(xs):
+    """De-multiplex an iterable of tuples by their first value.
+
+    Parameters
+    ----------
+    xs: Iterable of tuples
+
+    Returns
+    -------
+    [tuple]
+    """
+
+    demux_dict = {}
+    for x in xs:
+        if x[0] in demux_dict:
+            demux_dict[x[0]].append(x[1])
+        else:
+            demux_dict[x[0]] = [x[1]]
+
+    return list(demux_dict.items())
