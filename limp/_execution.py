@@ -7,8 +7,8 @@
 import multiprocessing as mp
 from time import time
 
-from .classes import (Dependency, Communication)
-from .helpers import is_iterable
+from ._classes import (Dependency, Communication)
+from ._helpers import is_iterable
 
 
 def expand_args(args, results):

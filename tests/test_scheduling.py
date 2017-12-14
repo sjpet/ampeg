@@ -10,7 +10,7 @@ Author: Stefan Peterson
 from .context import limp
 from .helpers import (stats, square, sum_stats, normalize, diff)
 
-inf = limp.scheduling.inf
+inf = limp._scheduling.inf
 
 # ## Test graphs and vectors
 test_x = [[0, 6, 2, 6, 1, 2, 3, 7, 2, 3, 1, 5, 6, 2, 8],
@@ -78,23 +78,23 @@ upward_rank_1 = {'stats_0': 210.5,
                  'final': 53}
 
 task_lists_functions_only_1 = [[stats,
-                                limp.scheduling.send,
-                                limp.scheduling.receive,
+                                limp._scheduling.send,
+                                limp._scheduling.receive,
                                 sum_stats,
-                                limp.scheduling.receive,
+                                limp._scheduling.receive,
                                 normalize,
-                                limp.scheduling.receive,
+                                limp._scheduling.receive,
                                 diff],
                                [stats,
-                                limp.scheduling.send,
-                                limp.scheduling.receive,
-                                limp.scheduling.receive,
+                                limp._scheduling.send,
+                                limp._scheduling.receive,
+                                limp._scheduling.receive,
                                 normalize,
-                                limp.scheduling.send],
+                                limp._scheduling.send],
                                [square,
-                                limp.scheduling.send],
+                                limp._scheduling.send],
                                [square,
-                                limp.scheduling.send]]
+                                limp._scheduling.send]]
 
 task_ids_1_ = [['stats_1', None, None, 4, None, 5, None, 'final'],
               ['stats_0', None, None, None, 6, None],
@@ -151,92 +151,92 @@ multiplexing_keys_1 = {0: [1], 2: [3, 6]}
 # ## Tests for helper functions
 
 def test_overlaps_preceding():
-    assert not limp.scheduling.overlaps((0, 23, 45.2), (1, 45.2, 67))
+    assert not limp._scheduling.overlaps((0, 23, 45.2), (1, 45.2, 67))
 
 
 def test_overlaps_succeeding():
-    assert not limp.scheduling.overlaps((0, 45.2, 67), (1, 23, 45.2))
+    assert not limp._scheduling.overlaps((0, 45.2, 67), (1, 23, 45.2))
 
 
 def test_overlaps_overlapping_1():
-    assert limp.scheduling.overlaps((0, 23, 45.2), (1, 39.1, 67))
+    assert limp._scheduling.overlaps((0, 23, 45.2), (1, 39.1, 67))
 
 
 def test_overlaps_overlapping_2():
-    assert limp.scheduling.overlaps((0, 39.1, 67), (1, 23, 45.2))
+    assert limp._scheduling.overlaps((0, 39.1, 67), (1, 23, 45.2))
 
 
 def test_overlaps_overlapping_3():
-    assert limp.scheduling.overlaps((0, 39.1, 45.2), (1, 23, 67))
+    assert limp._scheduling.overlaps((0, 39.1, 45.2), (1, 23, 67))
 
 
 def test_overlaps_overlapping_4():
-    assert limp.scheduling.overlaps((0, 23, 67), (1, 39.1, 45.2))
+    assert limp._scheduling.overlaps((0, 23, 67), (1, 39.1, 45.2))
 
 
 def test_precedes_preceding_1():
-    assert limp.scheduling.precedes((0, 23, 45.2), (1, 45.2, 67))
+    assert limp._scheduling.precedes((0, 23, 45.2), (1, 45.2, 67))
 
 
 def test_precedes_preceding_2():
-    assert limp.scheduling.precedes((0, 23, 45.2), (1, 48.6, 67))
+    assert limp._scheduling.precedes((0, 23, 45.2), (1, 48.6, 67))
 
 
 def test_precedes_succeeding():
-    assert not limp.scheduling.precedes((0, 45.2, 67), (1, 23, 45.2))
+    assert not limp._scheduling.precedes((0, 45.2, 67), (1, 23, 45.2))
 
 
 def test_precedes_overlapping_1():
-    assert not limp.scheduling.precedes((0, 23, 45.2), (1, 39.1, 67))
+    assert not limp._scheduling.precedes((0, 23, 45.2), (1, 39.1, 67))
 
 
 def test_precedes_overlapping_2():
-    assert not limp.scheduling.precedes((0, 39.1, 67), (1, 23, 45.2))
+    assert not limp._scheduling.precedes((0, 39.1, 67), (1, 23, 45.2))
 
 
 def test_precedes_overlapping_3():
-    assert not limp.scheduling.precedes((0, 39.1, 45.2), (1, 23, 67))
+    assert not limp._scheduling.precedes((0, 39.1, 45.2), (1, 23, 67))
 
 
 def test_precedes_overlapping_4():
-    assert not limp.scheduling.precedes((0, 23, 67), (1, 39.1, 45.2))
+    assert not limp._scheduling.precedes((0, 23, 67), (1, 39.1, 45.2))
 
 
 def test_list_dependencies_single_dependency_1():
     task_args = {'a': limp.Dependency(0, 'x')}
-    assert limp.scheduling.list_dependencies(task_args) == [0]
+    assert limp._scheduling.list_dependencies(task_args) == [0]
 
 
 def test_list_dependencies_single_dependency_2():
     task_args = {'a': limp.Dependency(0, 'x'),
                  'b': limp.Dependency(0, 'y')}
-    assert limp.scheduling.list_dependencies(task_args) == [0]
+    assert limp._scheduling.list_dependencies(task_args) == [0]
 
 
 def test_list_dependencies_multiple_dependencies():
     task_args = {'a': limp.Dependency(0, 'x'),
                  'b': limp.Dependency(1, 'y')}
-    assert limp.scheduling.list_dependencies(task_args) == [0, 1]
+    assert limp._scheduling.list_dependencies(task_args) == [0, 1]
 
 
 def test_list_dependencies_no_dependencies():
     task_args = {'a': 6, 'b': 3.2}
-    assert limp.scheduling.list_dependencies(task_args) == []
+    assert limp._scheduling.list_dependencies(task_args) == []
 
 
 def test_list_dependencies_nested_dependencies():
     task_args = {'a': limp.Dependency(0, 'x'),
                  'b': {'c': limp.Dependency(1, 'y'),
                        'd': limp.Dependency(3, 'z')}}
-    assert limp.scheduling.list_dependencies(task_args) == [0, 1, 3]
+    assert limp._scheduling.list_dependencies(task_args) == [0, 1, 3]
 
 
 def test_successor_graph():
-    assert limp.scheduling.successor_graph(test_graph_1) == successor_graph_1
+    assert limp._scheduling.successor_graph(test_graph_1) == successor_graph_1
 
 
 def test_costs():
-    x, y = limp.scheduling.costs(test_graph_1)
+    x, y = limp._scheduling.costs(test_graph_1)
     assert x == computation_costs_1
     # assert y == communication_costs_1
     assert set(y.keys()) == set(communication_costs_1.keys())
@@ -246,51 +246,51 @@ def test_costs():
 
 def test_idle_slots():
     schedule = [(0, 0, 56.1), (1, 72.3, 89.3)]
-    assert limp.scheduling.idle_slots(schedule) == [(56.1, 72.3),
-                                                    (89.3, inf)]
+    assert limp._scheduling.idle_slots(schedule) == [(56.1, 72.3),
+                                                     (89.3, inf)]
 
 
 def test_idle_slots_empty_schedule():
-    assert limp.scheduling.idle_slots([]) == [(0, inf)]
+    assert limp._scheduling.idle_slots([]) == [(0, inf)]
 
 
 def test_add_slot_to_empty_schedule():
-    assert limp.scheduling.add_slot('task_name',
-                                    12.8,
-                                    56.2,
-                                    []) == [('task_name', 12.8, 56.2)]
+    assert limp._scheduling.add_slot('task_name',
+                                     12.8,
+                                     56.2,
+                                     []) == [('task_name', 12.8, 56.2)]
 
 
 def test_add_slot_immediately_following():
     schedule = [('task_name', 12.8, 56.2)]
     new_schedule = [('task_name', 12.8, 56.2), ('new_task_name', 56.2, 76.1)]
-    assert limp.scheduling.add_slot('new_task_name',
-                                    56.2,
-                                    76.1,
-                                    schedule) == new_schedule
+    assert limp._scheduling.add_slot('new_task_name',
+                                     56.2,
+                                     76.1,
+                                     schedule) == new_schedule
 
 
 def test_upward_rank():
-    assert limp.scheduling.upward_rank(test_graph_1) == upward_rank_1
+    assert limp._scheduling.upward_rank(test_graph_1) == upward_rank_1
 
 
 def test_relabel_dependencies_dict():
     args = {'a': limp.Dependency('task_0', 6)}
     labels = {'task_0': 0}
     new_args = {'a': limp.Dependency(0, 6)}
-    assert limp.scheduling.relabel_dependencies(args, labels) == new_args
+    assert limp._scheduling.relabel_dependencies(args, labels) == new_args
 
 
 def test_relabel_dependencies_iterable():
     args = [limp.Dependency('task_0', 6)]
     labels = {'task_0': 0}
     new_args = [limp.Dependency(0, 6)]
-    assert limp.scheduling.relabel_dependencies(args, labels) == new_args
+    assert limp._scheduling.relabel_dependencies(args, labels) == new_args
 
 
 def test_remove_duplicates():
     reduced_graph, multiplexing_keys = \
-        limp.scheduling.remove_duplicates(test_graph_2)
+        limp._scheduling.remove_duplicates(test_graph_2)
     assert reduced_graph == reduced_graph_1
     assert multiplexing_keys == multiplexing_keys_1
 

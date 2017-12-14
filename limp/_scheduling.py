@@ -6,12 +6,12 @@
 
 import multiprocessing as mp
 
-from .classes import (Dependency, Communication)
-from .helpers import (inf,
-                      is_iterable,
-                      reverse_graph,
-                      equivalent_args,
-                      demux)
+from ._classes import (Dependency, Communication)
+from ._helpers import (inf,
+                       is_iterable,
+                       reverse_graph,
+                       equivalent_args,
+                       demux)
 
 
 # ## Helper functions
@@ -761,8 +761,8 @@ def earliest_finish_time(graph, n_processes):
     Returns
     -------
     [[(function, kwargs)]]
-        A set of task lists
-    [[task_id or [task_id]]]
+        A list of task lists
+    [[task_id, [task_id] or Communication]]
         A nested list for mapping execution results to task IDs
     """
 

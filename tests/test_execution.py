@@ -75,67 +75,67 @@ costs_1 = {'stats_0': (None, {}),
 def test_expand_recursively_nested_iterable():
     results = [None, [5]]
     keys = (1, 0)
-    assert limp.execution.expand_recursively(results, keys) == 5
+    assert limp._execution.expand_recursively(results, keys) == 5
 
 
 def test_expand_recursively_nested_dict():
     results = {'a': {'b': 6, 'c': 7}}
     keys = ('a', 'b')
-    assert limp.execution.expand_recursively(results, keys) == 6
+    assert limp._execution.expand_recursively(results, keys) == 6
 
 
 def test_expand_args_single_result():
     results = [(None,), (None,), (7,)]
     args = (limp.Dependency(2, None),)
-    assert limp.execution.expand_args(args, results) == (7,)
+    assert limp._execution.expand_args(args, results) == (7,)
 
 
 def test_expand_arg_dict_key():
     results = [(None,), (None,), ({'a': 8},)]
     args = (limp.Dependency(2, 'a'),)
-    assert limp.execution.expand_args(args, results) == (8,)
+    assert limp._execution.expand_args(args, results) == (8,)
 
 
 def test_expand_arg_iterable_index():
     results = [(None,), (None,), ([6, 9, 2],)]
     args = (limp.Dependency(2, 1),)
-    assert limp.execution.expand_args(args, results) == (9,)
+    assert limp._execution.expand_args(args, results) == (9,)
 
 
 def test_expand_arg_nested_keys():
     results = [(None,), (None,), ({'a': [8, 9, 10]},)]
     args = (limp.Dependency(2, ('a', 2)),)
-    assert limp.execution.expand_args(args, results) == (10,)
+    assert limp._execution.expand_args(args, results) == (10,)
 
 
 def test_expand_arg_no_dependency():
     results = [(None,), (None,), (7,)]
     args = (42,)
-    assert limp.execution.expand_args(args, results) == args
+    assert limp._execution.expand_args(args, results) == args
 
 
 def test_expand_args_iterable_no_dependency():
     results = [(None,), (None,), (7,)]
     args = ([1, 2, 3, 4],)
-    assert limp.execution.expand_args(args, results) == args
+    assert limp._execution.expand_args(args, results) == args
 
 
 def test_expand_args_dict():
     results = [({'a': 6},), (None,), (None,), (8,)]
     args = {'x': limp.Dependency(0, 'a'), 'y': limp.Dependency(3, None)}
-    assert limp.execution.expand_args(args, results) == {'x': 6, 'y': 8}
+    assert limp._execution.expand_args(args, results) == {'x': 6, 'y': 8}
 
 
 def test_expand_args_list():
     results = [({'a': 6},), (None,), (None,), (8,)]
     args = [limp.Dependency(0, 'a'), limp.Dependency(3, None)]
-    assert limp.execution.expand_args(args, results) == [6, 8]
+    assert limp._execution.expand_args(args, results) == [6, 8]
 
 
 def test_expand_args_iterable_mixed():
     results = [({'a': 6},), (None,), (None,), (8,)]
     args = [limp.Dependency(0, 'a'), 63, (limp.Dependency(3, None), 5)]
-    assert limp.execution.expand_args(args, results) == [6, 63, (8, 5)]
+    assert limp._execution.expand_args(args, results) == [6, 63, (8, 5)]
 
 
 def test_expand_args_nested_dict():
@@ -143,13 +143,13 @@ def test_expand_args_nested_dict():
     args = {'stage_0': {'x': limp.Dependency(0, 'a'),
                         'y': limp.Dependency(3, None)}}
     expanded_args = {'stage_0': {'x': 6, 'y': 8}}
-    assert limp.execution.expand_args(args, results) == expanded_args
+    assert limp._execution.expand_args(args, results) == expanded_args
 
 
 def test_expand_args_dict_no_dependencies():
     results = [({'a': 6},), (None,), (None,), (8,)]
     args = {'x': 4, 'y': 2}
-    assert limp.execution.expand_args(args, results) == args
+    assert limp._execution.expand_args(args, results) == args
 
 
 # Execution tests
