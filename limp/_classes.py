@@ -4,20 +4,19 @@
 @author: Stefan Peterson
 """
 
+from collections import namedtuple
 
-class Dependency(tuple):
-    """A simple (index, key, communication cost) tuple, implemented as a new
-    subclass in order to eliminate ambiguity and allow relaxed equivalence.
-    """
+
+class Dependency(namedtuple("Dependency",
+                            ("index", "key", "communication_cost"))):
+
     def __new__(cls, index, key, communication_cost=0):
-        return tuple.__new__(cls, (index, key, communication_cost))
+        return super(Dependency, cls).__new__(cls,
+                                              index,
+                                              key,
+                                              communication_cost)
 
     def __eq__(self, other):
         return (self[0], self[1]) == (other[0], other[1])
 
-
-class Communication(tuple):
-    """A simple (sender, recipients) tuple, implemented as a new subclass for
-    distinction."""
-    def __new__(cls, sender, recipients):
-        return tuple.__new__(cls, (sender, recipients))
+Communication = namedtuple("Communication", ("sender", "recipients"))

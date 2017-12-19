@@ -167,10 +167,10 @@ def test_execution_costs():
     assert results == results_1
     assert set(costs.keys()) == set(costs_1.keys())
     for key in costs.keys():
-        assert costs[key][0] > 0.0
+        assert costs[key][0] >= 0.0
         assert set(costs[key][1].keys()) == set(costs_1[key][1].keys())
         for key_ in costs[key][1].keys():
-            assert costs[key][1][key_] > 0.0
+            assert costs[key][1][key_] >= 0.0
 
 
 def test_execution_multiplexing():
@@ -194,7 +194,7 @@ def test_execution_multiplexing_costs():
     assert results == results_1_
     assert set(costs.keys()) == set(costs_1_.keys())
     for key in costs.keys():
-        assert costs[key][0] > 0.0
+        assert costs[key][0] >= 0.0
         assert set(costs[key][1].keys()) == set(costs_1_[key][1].keys())
         for key_ in costs[key][1].keys():
-            assert costs[key][1][key_] > 0.0
+            assert costs[key][1][key_] >= 0.0
