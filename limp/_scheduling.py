@@ -7,6 +7,7 @@
 import multiprocessing as mp
 
 from ._classes import (Dependency, Communication)
+from ._exceptions import TimeoutError
 from ._helpers import (inf,
                        is_iterable,
                        reverse_graph,
@@ -265,7 +266,7 @@ def costs(graph):
     return computational_costs, communication_costs
 
 
-def generate_task_lists(graph, schedule):
+def generate_task_lists(graph, schedule, timeout):
     """Generate a set of task lists from a graph and schedule.
 
     Parameters
@@ -276,6 +277,8 @@ def generate_task_lists(graph, schedule):
     schedule : [[(Int, Float, Float)]]
         Task schedule represented as a nested list of (task, start, finish)-
         tuples, one list per processor
+    timeout : int or None
+        Timeout for receive tasks
 
     Returns
     -------
@@ -309,7 +312,7 @@ def generate_task_lists(graph, schedule):
     flat_schedule = sorted([add_process_index(t, p)
                             for p in range(len(schedule))
                             for t in schedule[p]],
-                           key=lambda t: t[3],
+                           key=lambda q: q[3],
                            reverse=True)
 
     task_lists = [[] for _ in range(num_processes)]
@@ -327,7 +330,8 @@ def generate_task_lists(graph, schedule):
             if finish_ < start:
                 task_indices[process][task_] = len(task_lists[process])
                 task_lists[process].append((receive,
-                                            {'pipe': pipes[process][process_]}))
+                                            {"pipe": pipes[process][process_],
+                                             "timeout": timeout}))
                 task_ids[process].append(Communication(task_, own_tasks))
                 removals.append(k)
 
@@ -346,9 +350,9 @@ def generate_task_lists(graph, schedule):
 
         # Add any required send tasks
         for (p, ts) in successor_processes[this_task]:
-            task_lists[process].append((send, {'result': Dependency(task_index,
+            task_lists[process].append((send, {"result": Dependency(task_index,
                                                                     None),
-                                               'pipe': pipes[process][p]}))
+                                               "pipe": pipes[process][p]}))
             task_ids[process].append(Communication(this_task, ts))
             receive_queue[p].append((this_task, process, finish, ts))
 
@@ -381,9 +385,49 @@ def multiplex_task_ids(task_ids, multiplexing_keys):
         for kk in range(len(task_ids_[k])):
             this_task_id = task_ids_[k][kk]
             if this_task_id in multiplexing_keys:
-                task_ids_[k][kk] = (this_task_id,) + multiplexing_keys[this_task_id]
+                task_ids_[k][kk] = (this_task_id,) + \
+                                   multiplexing_keys[this_task_id]
 
     return task_ids_
+
+
+def filter_task_ids(task_ids, output_tasks):
+    """Filter task ids, leaving only output tasks.
+
+    Parameters
+    ----------
+    task_ids : [[task_id or (task_id,)]]
+        A nested list for mapping execution results to task IDs
+    output_tasks : [task_id]
+        A list of output tasks
+
+    Returns
+    -------
+    [[task_id or (task_id,)]]
+    """
+    if output_tasks is None:
+        return task_ids
+
+    filtered_task_ids = []
+    for k, task_ids_k in enumerate(task_ids):
+        filtered_task_ids.append([])
+        for task_id in task_ids_k:
+            if isinstance(task_id, Communication):
+                if task_id.sender in output_tasks:
+                    task_id_ = task_id
+                elif any(x in output_tasks for x in task_id.recipients):
+                    task_id_ = Communication(task_id.sender,
+                                             [x for x in task_id.recipients
+                                              if x in output_tasks])
+                else:
+                    task_id_ = None
+            elif isinstance(task_id, tuple):
+                task_id_ = tuple(id_ for id_ in task_id if id_ in output_tasks)
+            else:
+                task_id_ = task_id if task_id in output_tasks else None
+            filtered_task_ids[k].append(task_id_)
+
+    return filtered_task_ids
 
 
 def idle_slots(schedule):
@@ -635,18 +679,22 @@ def send(result, pipe):
     return None
 
 
-def receive(pipe):
+def receive(pipe, timeout=None):
     """Receive a result from another process.
 
     Parameters
     ----------
     pipe : multiprocessing.Pipe
+    timeout : int
+        maximum time in seconds
 
     Returns
     -------
     dict
     """
 
+    if pipe.poll(timeout) is False:
+        raise TimeoutError.default(None)
     return pipe.recv()
 
 
@@ -742,7 +790,7 @@ def upward_rank(graph):
     return ranks
 
 
-def earliest_finish_time(graph, n_processes):
+def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=None):
     """Generate a set of task lists from a graph.
 
     Parameters
@@ -754,9 +802,14 @@ def earliest_finish_time(graph, n_processes):
         (function, parameters, computational cost) as values. `parameters` can
         be dict or another iterable containing any mix of concrete values and
         `Dependency` instances.
-
     n_processes : Int
         Number of processes to use
+    output_tasks : list, optional
+        A list of output tasks. Default is None, which considers all tasks to
+        be output tasks
+    timeout : bool, optional
+        timeout for receive tasks, default is None
+
 
     Returns
     -------
@@ -776,6 +829,7 @@ def earliest_finish_time(graph, n_processes):
     task_ids = [task for task in graph_.keys()]
     ranks_ = [ranks[task] for task in task_ids]
 
+    # noinspection PyTypeChecker
     task_priority = [task_ids[k] for k in sorted(range(len(task_ids)),
                                                  key=ranks_.__getitem__)]
 
@@ -789,6 +843,9 @@ def earliest_finish_time(graph, n_processes):
                                 communication_costs,
                                 schedule)
 
-    task_lists, task_ids = generate_task_lists(graph_, schedule)
+    task_lists, task_ids_ = generate_task_lists(graph_, schedule, timeout)
+    task_ids = filter_task_ids(multiplex_task_ids(task_ids_,
+                                                  multiplexing_keys),
+                               output_tasks)
 
-    return task_lists, multiplex_task_ids(task_ids, multiplexing_keys)
+    return task_lists, task_ids

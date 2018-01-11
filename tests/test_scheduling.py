@@ -4,9 +4,6 @@
 Author: Stefan Peterson
 """
 
-# import os
-# import pytest
-
 from .context import limp
 from .helpers import (stats, square, sum_stats, normalize, diff)
 
@@ -97,9 +94,9 @@ task_lists_functions_only_1 = [[stats,
                                 limp._scheduling.send]]
 
 task_ids_1_ = [['stats_1', None, None, 4, None, 5, None, 'final'],
-              ['stats_0', None, None, None, 6, None],
-              [2, None],
-              [3, None]]
+               ['stats_0', None, None, None, 6, None],
+               [2, None],
+               [3, None]]
 
 task_ids_1 = [['stats_1',
                ('stats_1', [6]),
