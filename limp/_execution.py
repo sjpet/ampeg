@@ -7,7 +7,8 @@
 import multiprocessing as mp
 from time import time
 
-from ._classes import (Dependency, Communication)
+from ._classes import (Dependency, Communication, Err)
+from ._exceptions import DependencyError, TimeoutError
 from ._helpers import is_iterable
 
 
@@ -31,11 +32,16 @@ def expand_args(args, results):
 
     if isinstance(args, Dependency):
         if args[1] is None:
-            return results[args[0]][0]
+            r = results[args[0]][0]
         elif is_iterable(args[1]):
-            return expand_recursively(results[args[0]][0], args[1])
+            r = expand_recursively(results[args[0]][0], args[1])
         else:
-            return results[args[0]][0][args[1]]
+            r = results[args[0]][0][args[1]]
+
+        if isinstance(r, Err):
+            raise DependencyError.default(r)
+        else:
+            return r
 
     elif isinstance(args, dict):
         return {key: expand_args(val, results) for (key, val) in args.items()}
@@ -150,12 +156,16 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
     """
 
     results = []
-    for (task, args) in task_list:
+    for k, (task, args) in enumerate(task_list):
         this_start = time()
-        if isinstance(args, dict):
-            this_result = task(**expand_args(args, results))
-        else:
-            this_result = task(*expand_args(args, results))
+        try:
+            expanded_args = expand_args(args, results)
+            if isinstance(expanded_args, dict):
+                this_result = task(**expanded_args)
+            else:
+                this_result = task(*expanded_args)
+        except Exception as e:
+            this_result = Err(e)
         this_end = time()
 
         results.append((this_result,) if costs is False
@@ -170,7 +180,7 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
     return results
 
 
-def execute_task_lists(task_lists, task_ids=None, costs=False):
+def execute_task_lists(task_lists, task_ids=None, costs=False, timeout=60):
     """Execute a number of task list over equally many processes.
 
     Parameters
@@ -181,6 +191,9 @@ def execute_task_lists(task_lists, task_ids=None, costs=False):
         A nested list of task_ids to sort execution results
     costs : bool, optional
         Include approximate costs if True. Default is False.
+    timeout : int, optional
+        Timeout in seconds for collecting results from spawned processes,
+        default is 60.
 
     Returns
     -------
@@ -223,7 +236,11 @@ def execute_task_lists(task_lists, task_ids=None, costs=False):
     # Collect results from other processes
     for k in range(1, n_processes):
         locks[k].release()
-        results.append(pipes[0][k].recv())
+        if pipes[0][k].poll(timeout) is False:
+            timeout_error = TimeoutError.default(k)
+            results.append([(Err(timeout_error),) for _ in task_lists[k]])
+        else:
+            results.append(pipes[0][k].recv())
         p[k].join()
 
     results_ = {}
@@ -235,20 +252,12 @@ def execute_task_lists(task_lists, task_ids=None, costs=False):
                 pass
             elif is_iterable(task):
                 for t in task:
-                    results_[t] = result[0]
+                    if t is not None:
+                        results_[t] = result[0]
             elif task is not None:
                 results_[task] = result[0]
 
     if costs is True:
         results_["costs"] = costs_dict(results, task_ids)
-
-    # results_ = {task: result for k in range(n_processes)
-    #             for task, result in zip(task_ids[k], results[k]) if
-    #             task is not None}
-    #
-    # if multiplexing_keys is not None:
-    #     for key, additional_keys in multiplexing_keys:
-    #         for key_ in additional_keys:
-    #             results_[key_] = results_[key]
 
     return results_

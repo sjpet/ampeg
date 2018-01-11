@@ -2,9 +2,14 @@
 Limp
 ====
 
-Limp is a Lightweight framework for Multiprocessing. It provides generic
+Limp is a lightweight framework for multiprocessing. It provides simple
 functions for scheduling and execution of a set of dependent or independent
-computational tasks over multiple processes using the multiprocessing package.
+computational tasks over multiple processes using the ``multiprocessing``
+package.
+
+Good scheduling relies on good estimates for computational- and communication
+costs for each task. If good estimates cannot be made for whatever reason,
+consider using e.g. ``multiprocessing.Pool`` instead.
 
 Requirements
 ------------
@@ -21,7 +26,7 @@ Usage
 -----
 
 Limp exposes a scheduling function ``earliest_finish_time``, an execution
-function ``execute_task_lists`` and a class ``Dependency``. The former takes a
+function ``execute_task_lists`` and a ``Dependency`` class. The former takes a
 directed acyclic graph (DAG) and a number of processes and produces a set of
 task lists for each process and a corresponding set of task IDs for translating
 the execution result. These two form the input to ``execute_task_lists``, which
@@ -58,3 +63,11 @@ such values to be applied in sequence. For example, the key ``('values', 2)``
 extracts the value 5 from the dict ``{'values': [1, 3, 5]}``. Dependency
 instances are created by limp.Dependency(task, key, cost) where cost is
 optional and defaults to 0.
+
+Exceptions
+----------
+
+Limp catches exceptions raised by individual tasks, returning them as results
+encapsulated in the ``Err`` class. When an ``Err`` instance is found among the
+dependencies for a task, the result for this task will be an ``Err`` instance
+encapsulating a ``DependencyError``.
