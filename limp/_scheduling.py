@@ -679,14 +679,14 @@ def send(result, pipe):
     return None
 
 
-def receive(pipe, timeout=None):
+def receive(pipe, timeout=60):
     """Receive a result from another process.
 
     Parameters
     ----------
     pipe : multiprocessing.Pipe
-    timeout : int
-        maximum time in seconds
+    timeout : int, optional
+        Maximum time allowed in seconds, default is 60
 
     Returns
     -------
@@ -790,7 +790,7 @@ def upward_rank(graph):
     return ranks
 
 
-def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=None):
+def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=60):
     """Generate a set of task lists from a graph.
 
     Parameters
@@ -807,8 +807,8 @@ def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=None):
     output_tasks : list, optional
         A list of output tasks. Default is None, which considers all tasks to
         be output tasks
-    timeout : bool, optional
-        timeout for receive tasks, default is None
+    timeout : int, optional
+        Timeout for receive tasks, default is 60
 
 
     Returns
