@@ -320,7 +320,7 @@ def generate_task_lists(graph, schedule, timeout):
     receive_queue = [[] for _ in range(num_processes)]
     task_indices = [{} for _ in range(num_processes)]
 
-    while flat_schedule:
+    while len(flat_schedule) > 0:
         this_task, process, start, finish = flat_schedule.pop()
 
         # Add any queued receive tasks
@@ -631,9 +631,9 @@ def remove_duplicates(graph):
                 if val[0] == val_[0] and equivalent_args(val[1], val_[1]):
                     existing_key = key_
                     break
+
             if existing_key is None:
                 reduced_graph[key] = val
-
             else:
                 # Use maximum cost
                 reduced_graph[existing_key] = (

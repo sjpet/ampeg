@@ -4,6 +4,8 @@
 @author: Stefan Peterson
 """
 
+from types import GeneratorType
+
 try:
     from math import inf
 except ImportError:     # For Python 2
@@ -22,7 +24,7 @@ def is_iterable(x):
     bool
     """
 
-    return (not isinstance(x, str)) and hasattr(x, '__iter__')
+    return isinstance(x, (tuple, list, dict, GeneratorType))
 
 
 def reverse_graph(graph):
@@ -76,15 +78,15 @@ def equivalent_args(args_0, args_1):
     elif is_iterable(args_0):
         if is_iterable(args_1):
             try:
-                return args_0 == args_1
+                return (args_0 == args_1) is True
             except ValueError:
-                return all(args_0 == args_1)
+                return all(equivalent_args(a, b)
+                           for a, b in zip(args_0, args_1))
         else:
             return False
 
     else:
-        print(args_0 == args_1)
-        return args_0 == args_1
+        return (args_0 == args_1) is True
 
     return True
 
@@ -122,6 +124,7 @@ def pretty_traceback(tb):
     -------
     str
     """
+
     tb_string = "  File \"{fname}\", line {line_no}, in {module} \n    {expr}"
     return "Traceback (most recent call last):\n" + \
         "\n".join(tb_string.format(fname=level[0],

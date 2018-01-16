@@ -5,6 +5,7 @@ Author: Stefan Peterson
 """
 
 import sys
+
 import pytest
 
 from .context import limp
@@ -410,5 +411,4 @@ def test_execution_child_process_killed():
     task_lists[1][1] = (sys.exit, [])
     results = limp.execute_task_lists(task_lists, task_ids, timeout=1)
     for key in results:
-        print(key)
         assert results[key] == results_2_timeout[key]
