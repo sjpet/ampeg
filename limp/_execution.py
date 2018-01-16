@@ -4,6 +4,8 @@
 @author: Stefan Peterson
 """
 
+import sys
+import traceback
 import multiprocessing as mp
 from time import time
 
@@ -165,7 +167,8 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
             else:
                 this_result = task(*expanded_args)
         except Exception as e:
-            this_result = Err(e)
+            _, _, tb = sys.exc_info()
+            this_result = Err(e, traceback.extract_tb(tb))
         this_end = time()
 
         results.append((this_result,) if costs is False

@@ -55,4 +55,4 @@ from ._exceptions import DependencyError, TimeoutError
 from ._scheduling import earliest_finish_time, remove_duplicates
 from ._execution import execute_task_lists
 
-__version__ = "0.4"
+__version__ = "0.5"

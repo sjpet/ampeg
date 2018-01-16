@@ -6,14 +6,17 @@
 
 from collections import namedtuple
 
+from ._helpers import pretty_traceback
+
 
 class Err(object):
     """A task result indicating that an exception was raised by the task."""
 
-    def __init__(self, err):
+    def __init__(self, err, traceback=None):
         # Deconstruct the exception since Python 2 can't unpickle them
         self.err_type = type(err)
         self.message = str(err)
+        self.traceback = traceback
 
     def __eq__(self, other):
         if not isinstance(other, Err):
@@ -25,6 +28,10 @@ class Err(object):
     def __repr__(self):
         return "Err<{t}(\"{m}\")>".format(t=self.err_type.__name__,
                                           m=self.message)
+    
+    @property
+    def message_with_traceback(self):
+        return self.message + "\n" + pretty_traceback(self.traceback)
 
 
 class Dependency(namedtuple("Dependency",

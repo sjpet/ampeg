@@ -109,3 +109,22 @@ def demux(xs):
             demux_dict[x[0]] = [x[1]]
 
     return list(demux_dict.items())
+
+
+def pretty_traceback(tb):
+    """Format traceback information as a pretty string.
+    
+    Parameters
+    ----------
+    tb : List[(str, int, str, str)]
+    
+    Returns
+    -------
+    str
+    """
+    tb_string = "  File \"{fname}\", line {line_no}, in {module} \n    {expr}"
+    return "Traceback (most recent call last):\n" + \
+        "\n".join(tb_string.format(fname=level[0],
+                                   line_no=level[1],
+                                   module=level[2],
+                                   expr=level[3]) for level in tb)
