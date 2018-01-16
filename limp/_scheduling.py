@@ -810,7 +810,6 @@ def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=60):
     timeout : int, optional
         Timeout for receive tasks, default is 60
 
-
     Returns
     -------
     [[(function, kwargs)]]
