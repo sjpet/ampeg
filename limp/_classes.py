@@ -6,8 +6,6 @@
 
 from collections import namedtuple
 
-from ._helpers import pretty_traceback
-
 
 class Err(object):
     """A task result indicating that an exception was raised by the task."""
@@ -31,7 +29,24 @@ class Err(object):
     
     @property
     def message_with_traceback(self):
-        return self.message + "\n" + pretty_traceback(self.traceback)
+        return self.message + "\n" + self._pretty_traceback()
+
+    def _pretty_traceback(self):
+        """Format traceback information as a pretty string.
+
+        Returns
+        -------
+        str
+        """
+
+        tb_string = "  File \"{fname}\", line {line_no}, in {module} \n" \
+                    "    {expr}"
+        return "Traceback (most recent call last):\n" + \
+               "\n".join(tb_string.format(fname=level[0],
+                                          line_no=level[1],
+                                          module=level[2],
+                                          expr=level[3])
+                         for level in self.traceback)
 
 
 class Dependency(namedtuple("Dependency",

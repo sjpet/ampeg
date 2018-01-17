@@ -6,13 +6,14 @@
 
 import multiprocessing as mp
 
-from ._classes import (Dependency, Communication)
+from ._classes import Dependency, Communication
 from ._exceptions import TimeoutError
 from ._helpers import (inf,
                        is_iterable,
                        reverse_graph,
                        equivalent_args,
-                       demux)
+                       demux,
+                       recursive_map)
 
 
 # ## Helper functions
@@ -87,47 +88,25 @@ def relabel_dependencies(args, labels):
 
     Parameters
     ----------
-    args : dict or iterable
+    args : Union[dict, list, tuple, set]
         A dict of keyword arguments or an iterable of arguments
     labels : dict
         A dict of task reference replacements
 
     Returns
     -------
-    dict or iterable
+    Union[dict, list, tuple, set]
         A new dict or iterable of arguments
     """
 
-    if isinstance(args, dict):
-        new_args = {}
-        for (key, val) in args.items():
-            if isinstance(val, Dependency):
-                predecessor, key_, cost = val
-                if predecessor in labels:
-                    new_args[key] = Dependency(labels[predecessor], key_, cost)
-                else:
-                    new_args[key] = val
-            elif is_iterable(val):
-                new_args[key] = relabel_dependencies(val, labels)
-            else:
-                new_args[key] = val
+    def f(x):
+        if isinstance(x, Dependency):
+            predecessor, key_, cost = x
+            if predecessor in labels:
+                return Dependency(labels[predecessor], key_, cost)
+        return x
 
-    elif is_iterable(args):
-        new_args = []
-        for val in args:
-            if isinstance(val, Dependency):
-                predecessor, key_, cost = val
-                new_args.append(Dependency(labels[predecessor], key_, cost))
-            elif is_iterable(val):
-                new_args.append(relabel_dependencies(val, labels))
-            else:
-                new_args.append(val)
-
-    else:
-        raise TypeError("Arguments must be supplied as a dict "
-                        "or in an iterable")
-
-    return new_args
+    return recursive_map(f, args)
 
 
 def list_dependencies(args):
@@ -834,7 +813,7 @@ def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=60):
 
     schedule = [[] for _ in range(n_processes)]
 
-    while not task_priority == []:
+    while len(task_priority) > 0:
         next_task = task_priority.pop()
         schedule = add_task_eft(next_task,
                                 predecessors[next_task],

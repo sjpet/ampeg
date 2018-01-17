@@ -4,7 +4,7 @@
 @author: Stefan Peterson
 """
 
-from types import GeneratorType
+from ._classes import Dependency
 
 try:
     from math import inf
@@ -17,14 +17,31 @@ def is_iterable(x):
 
     Parameters
     ----------
-    x : any type
+    x : A
 
     Returns
     -------
     bool
     """
 
-    return isinstance(x, (tuple, list, dict, GeneratorType))
+    return isinstance(x, (tuple, list, set)) and not isinstance(x, Dependency)
+
+
+def recursive_map(f, x):
+    """A map that recursively descends tuples, lists, sets and dicts.
+
+    Parameters
+    ----------
+    f : fn(A) -> B
+    x : Union[dict, list, tuple, set, A]
+    """
+
+    if isinstance(x, dict):
+        return {key: recursive_map(f, val) for key, val in x.iteritems()}
+    elif is_iterable(x):
+        return type(x)(map(lambda y: recursive_map(f, y), x))
+    else:
+        return f(x)
 
 
 def reverse_graph(graph):
@@ -111,23 +128,3 @@ def demux(xs):
             demux_dict[x[0]] = [x[1]]
 
     return list(demux_dict.items())
-
-
-def pretty_traceback(tb):
-    """Format traceback information as a pretty string.
-    
-    Parameters
-    ----------
-    tb : List[(str, int, str, str)]
-    
-    Returns
-    -------
-    str
-    """
-
-    tb_string = "  File \"{fname}\", line {line_no}, in {module} \n    {expr}"
-    return "Traceback (most recent call last):\n" + \
-        "\n".join(tb_string.format(fname=level[0],
-                                   line_no=level[1],
-                                   module=level[2],
-                                   expr=level[3]) for level in tb)

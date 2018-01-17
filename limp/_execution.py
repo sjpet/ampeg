@@ -9,9 +9,9 @@ import traceback
 import multiprocessing as mp
 from time import time
 
-from ._classes import (Dependency, Communication, Err)
+from ._classes import Dependency, Communication, Err
 from ._exceptions import DependencyError, TimeoutError
-from ._helpers import is_iterable
+from ._helpers import is_iterable, recursive_map
 
 
 def expand_args(args, results):
@@ -32,30 +32,23 @@ def expand_args(args, results):
         Input argument(s) with any dependencies replaced
     """
 
-    if isinstance(args, Dependency):
-        if args[1] is None:
-            r = results[args[0]][0]
-        elif is_iterable(args[1]):
-            r = expand_recursively(results[args[0]][0], args[1])
-        else:
-            r = results[args[0]][0][args[1]]
+    def f(x):
+        if isinstance(x, Dependency):
+            if x[1] is None:
+                r = results[x[0]][0]
+            elif is_iterable(x[1]):
+                r = expand_recursively(results[x[0]][0], x[1])
+            else:
+                r = results[x[0]][0][x[1]]
 
-        if isinstance(r, Err):
-            raise DependencyError.default(r)
-        else:
-            return r
+            if isinstance(r, Err):
+                raise DependencyError.default(r)
+            else:
+                return r
 
-    elif isinstance(args, dict):
-        return {key: expand_args(val, results) for (key, val) in args.items()}
+        return x
 
-    elif isinstance(args, tuple):
-        return tuple(expand_args(v, results) for v in args)
-
-    elif isinstance(args, list):
-        return [expand_args(v, results) for v in args]
-
-    else:
-        return args
+    return recursive_map(f, args)
 
 
 def expand_recursively(result, keys):
