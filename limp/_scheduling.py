@@ -110,12 +110,13 @@ def relabel_dependencies(args, labels):
 
 
 def list_dependencies(args):
-    """Recursively list dependencies in a dict of keyword arguments.
+    """List dependencies in arguments.
 
     Parameters
     ----------
-    args : dict or iterable
-        A dict of keyword arguments or an iterable of arguments
+    args : Any
+        A single argument, an iterable of arguments or a dict of keyword
+        arguments
 
     Returns
     -------
@@ -125,26 +126,26 @@ def list_dependencies(args):
 
     dependencies = []
 
-    if isinstance(args, dict):
+    if isinstance(args, Dependency):
+        return[args.task_id]
+    elif isinstance(args, dict):
         iterable_args = args.values()
     elif is_iterable(args):
         iterable_args = args
     else:
-        raise TypeError("Arguments must be supplied as a dict "
-                        "or in an iterable")
+        return []
 
     for val in iterable_args:
         if isinstance(val, dict):
             dependencies.extend(list_dependencies(val))
         elif isinstance(val, Dependency):
-            predecessor, _, _ = val
-            dependencies.append(predecessor)
+            dependencies.append(val.task_id)
 
     return list(set(dependencies))
 
 
 def successor_graph(graph):
-    """
+    """Generate a graph showing the successor tasks for each task.
 
     Parameters
     ----------
@@ -164,7 +165,7 @@ def successor_graph(graph):
 
 
 def predecessor_graph(graph):
-    """
+    """Generate a graph showing the predecessor tasks for each task.
 
     Parameters
     ----------
@@ -175,7 +176,8 @@ def predecessor_graph(graph):
     Returns
     -------
     dict
-        A simplified graph including showing only successor tasks for each task
+        A simplified graph including showing only predecessor tasks for each
+        task
     """
     return reverse_graph(successor_graph(graph))
 
@@ -196,13 +198,14 @@ def list_communication_costs(args):
 
     communication_costs = {}
 
-    if isinstance(args, dict):
+    if isinstance(args, Dependency):
+        return args.communication_cost
+    elif isinstance(args, dict):
         iterable_args = args.values()
     elif is_iterable(args):
         iterable_args = args
     else:
-        raise TypeError("Arguments must be supplied as a dict "
-                        "or in an iterable")
+        return 0
 
     for val in iterable_args:
         if isinstance(val, dict):
@@ -576,6 +579,75 @@ def est(task,
 
 # ## Preprocessing functions
 
+def prefix(graph, prefix_key):
+    """Prefix task IDs in a ``graph`` with some ``prefix_key``.
+
+    Parameters
+    ----------
+    graph :  dict
+        A directed acyclic graph representing the computations where each
+        vertex represents a computational task
+    prefix_key : Any hashable
+
+    Returns
+    -------
+    dict
+        A new graph with prefixed task IDs
+    """
+    prefixed_graph = {}
+    for key, val in graph.iteritems():
+        prefixed_graph[prefix_single(key, prefix_key)] = \
+            prefix_dependencies(val, prefix_key)
+
+    return prefixed_graph
+
+
+def prefix_dependencies(args, prefix_key):
+    """Prefix dependencies in task argument(s).
+
+    Parameters
+    ----------
+    args : Any type T
+        A single argument, an iterable of arguments or a dict of keyword
+        arguments
+    prefix_key : Any hashable
+        A dict of task reference replacements
+
+    Returns
+    -------
+    T
+        A new dict or iterable of arguments
+    """
+
+    def f(x):
+        if isinstance(x, Dependency):
+            predecessor, key_, cost = x
+            return Dependency(prefix_single(predecessor, prefix_key),
+                              key_,
+                              cost)
+        return x
+
+    return recursive_map(f, args)
+
+
+def prefix_single(task_id, prefix_key):
+    """Prefix a single task ID with some ``prefix_key``.
+
+    Parameters
+    ----------
+    task_id : Any hashable
+    prefix_key: Any hashable
+
+    Returns
+    -------
+    tuple
+    """
+    if isinstance(task_id, tuple):
+        return tuple([prefix_key] + list(task_id))
+    else:
+        return prefix_key, task_id
+
+
 def remove_duplicates(graph):
     """Remove duplicate tasks from a graph.
 
@@ -602,7 +674,7 @@ def remove_duplicates(graph):
     multiplexing_keys = {}
     this_tier = [key for key, p in predecessors.items() if not p]
 
-    while this_tier:
+    while len(this_tier) > 0:
         for key in this_tier:
             val = graph_[key]
             existing_key = None

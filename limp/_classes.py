@@ -50,13 +50,13 @@ class Err(object):
 
 
 class Dependency(namedtuple("Dependency",
-                            ("index", "key", "communication_cost"))):
+                            ("task_id", "key", "communication_cost"))):
     """A named tuple that defines a dependency on some other task in the
     same graph."""
 
-    def __new__(cls, index, key, communication_cost=0):
+    def __new__(cls, task_id, key, communication_cost=0):
         return super(Dependency, cls).__new__(cls,
-                                              index,
+                                              task_id,
                                               key,
                                               communication_cost)
 

@@ -60,10 +60,6 @@ def expand_recursively(result, keys):
         A result
     keys : iterable
         A list of keys to apply in order
-    top_level : bool, optional
-        Indicates that the current function call is not a recursion, default
-        is True
-
 
     Returns
     -------
@@ -79,6 +75,67 @@ def expand_recursively(result, keys):
             return result[next_key]
     else:
         return result
+
+
+def inflate_results(results):
+    """Inflate a dict of results, expanding any tuple keys.
+
+    Parameters
+    ----------
+    results : dict
+        A flat dict of results
+
+    Returns
+    -------
+    dict
+        A nested dict of results
+    """
+    inflated_results = {}
+    for key, val in results.iteritems():
+        if isinstance(key, tuple):
+            current_level = inflated_results
+            for key_ in key[:-1]:
+                if key_ not in current_level:
+                    current_level[key_] = {}
+                current_level = current_level[key_]
+            current_level[key[-1]] = val
+        else:
+            inflated_results[key] = val
+
+    return inflated_results
+
+
+def collect_results(results, task_ids):
+    """Collect execution result lists into a dict, using keys from lists of
+    task IDs.
+
+    Parameters
+    ----------
+    results : List[List[Any]]
+        A nested list of execution results
+    task_ids : List[List[task ID]]
+        A nested list of task IDs
+
+    Returns
+    -------
+    dict
+        A nested dict of results
+    """
+    results_ = {}
+    iterator = enumerate(results) if task_ids is None \
+        else zip(task_ids, results)
+    for task_ids_k, results_k in iterator:
+        for task, result in zip(task_ids_k, results_k):
+            if isinstance(task, Communication):
+                pass
+            elif isinstance(task, list):
+                for t in task:
+                    if t is not None:
+                        results_[t] = result[0]
+            elif task is not None:
+                results_[task] = result[0]
+
+    return results_
 
 
 def costs_dict(results, task_ids):
@@ -157,8 +214,10 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
             expanded_args = expand_args(args, results)
             if isinstance(expanded_args, dict):
                 this_result = task(**expanded_args)
-            else:
+            elif is_iterable(expanded_args):
                 this_result = task(*expanded_args)
+            else:
+                this_result = task(expanded_args)
         except Exception as e:
             _, _, tb = sys.exc_info()
             this_result = Err(e, traceback.extract_tb(tb))
@@ -176,18 +235,24 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
     return results
 
 
-def execute_task_lists(task_lists, task_ids=None, costs=False, timeout=60):
+def execute_task_lists(task_lists,
+                       task_ids=None,
+                       inflate=False,
+                       costs=False,
+                       timeout=60):
     """Execute a number of task list over equally many processes.
 
     Parameters
     ----------
-    task_lists : [[(function, kwargs)]]
+    task_lists : List[List[(function, kwargs)]]
         A nested list of tasks and their kwargs
-    task_ids : [[task_id, [task_id] or Communication]], optional
+    task_ids : Optional[List[List[Union[task_id, [task_id], Communication]]]]
         A nested list of task_ids to sort execution results
-    costs : bool, optional
+    inflate : Optional[bool]
+        Inflate tuple keys in the results if True. Default is False.
+    costs : Optional[bool]
         Include approximate costs if True. Default is False.
-    timeout : int, optional
+    timeout : Optional[int]
         Timeout in seconds for collecting results from spawned processes,
         default is 60.
 
@@ -229,7 +294,7 @@ def execute_task_lists(task_lists, task_ids=None, costs=False, timeout=60):
     # Execute own task list
     results = [execute_task_list(task_lists[0], costs=costs)]
 
-    # Collect results from other processes
+    # Fetch results from child processes
     for k in range(1, n_processes):
         locks[k].release()
         if pipes[0][k].poll(timeout) is False:
@@ -239,21 +304,22 @@ def execute_task_lists(task_lists, task_ids=None, costs=False, timeout=60):
             results.append(pipes[0][k].recv())
         p[k].join()
 
-    results_ = {}
-    iterator = enumerate(results) if task_ids is None \
-        else zip(task_ids, results)
-    for task_ids_k, results_k in iterator:
-        for task, result in zip(task_ids_k, results_k):
-            if isinstance(task, Communication):
-                pass
-            elif is_iterable(task):
-                for t in task:
-                    if t is not None:
-                        results_[t] = result[0]
-            elif task is not None:
-                results_[task] = result[0]
+    results_ = collect_results(results, task_ids)
+
+    if inflate is True:
+        results_ = inflate_results(results_)
 
     if costs is True:
+        costs_key = "costs"
+        k = 0
+        while costs_key in results_:
+            costs_key = "costs_{}".format(k)
+            k += 1
+        if not costs_key == "costs":
+            message = "'costs' is already a task ID, using '{costs_key}' " \
+                      "instead"
+            raise UserWarning(message.format(costs_key=costs_key))
+
         results_["costs"] = costs_dict(results, task_ids)
 
     return results_

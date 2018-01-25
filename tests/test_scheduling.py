@@ -4,148 +4,24 @@
 Author: Stefan Peterson
 """
 
-from .context import limp
-from .helpers import (stats, square, sum_stats, normalize, diff)
+import limp
+
+from .helpers import square_one, add
+from .data import (test_graph_1,
+                   computation_costs_1,
+                   communication_costs_1,
+                   successor_graph_1,
+                   upward_rank_1,
+                   task_lists_functions_only_1,
+                   task_ids_1,
+                   test_graph_2,
+                   reduced_graph_1,
+                   multiplexing_keys_1)
 
 inf = limp._scheduling.inf
 
-# ## Test graphs and vectors
-test_x = [[0, 6, 2, 6, 1, 2, 3, 7, 2, 3, 1, 5, 6, 2, 8],
-          [1, 4, 5, 2, 3, 1, 4, 4, 3, 2, 5, 6, 3, 2, 1]]
 
-test_graph_1 = {'stats_0': (stats, {'x': test_x[0]}, 13),
-                'stats_1': (stats, {'x': test_x[1]}, 52),
-                2: (square, (test_x[0],), 64),
-                3: (square, {'x': test_x[1]}, 38),
-                4: (sum_stats,
-                    (limp.Dependency('stats_0', ('dummy', 'mu'), 5),
-                     limp.Dependency('stats_1', ('dummy', 'mu'), 3),
-                     limp.Dependency('stats_0', ('dummy', 'var')),
-                     limp.Dependency('stats_1', ('dummy', 'var'))),
-                    56),
-                5: (normalize,
-                    {'x': limp.Dependency(2, None, 13),
-                     'mu': limp.Dependency(4, 0, 6),
-                     'var': limp.Dependency(4, 1)},
-                    75),
-                6: (normalize,
-                    {'x': limp.Dependency(3, None, 7),
-                     'mu': limp.Dependency('stats_1', ('dummy', 'mu'), 8),
-                     'var': limp.Dependency('stats_1', ('dummy', 'var'))},
-                    75),
-                'final': (diff,
-                          {'x': limp.Dependency(5, 'y', 12),
-                           'y': limp.Dependency(6, 'y', 10)},
-                          42)}
-
-computation_costs_1 = {'stats_0': 13,
-                       'stats_1': 52,
-                       2: 64,
-                       3: 38,
-                       4: 56,
-                       5: 75,
-                       6: 75,
-                       'final': 42}
-
-communication_costs_1 = {'stats_0': [],
-                         'stats_1': [],
-                         2: [],
-                         3: [],
-                         4: [('stats_0', 5), ('stats_1', 3)],
-                         5: [(2, 13), (4, 6)],
-                         6: [(3, 7), ('stats_1', 8)],
-                         'final': [(5, 12), (6, 10)]}
-
-successor_graph_1 = {'stats_0': [4],
-                     'stats_1': [4, 6],
-                     2: [5],
-                     3: [6],
-                     4: [5],
-                     5: ['final'],
-                     6: ['final'],
-                     'final': []}
-
-upward_rank_1 = {'stats_0': 210.5,
-                 'stats_1': 385,
-                 2: 201.5,
-                 3: 173.5,
-                 4: 197.5,
-                 5: 137.5,
-                 6: 135.5,
-                 'final': 53}
-
-task_lists_functions_only_1 = [[stats,
-                                limp._scheduling.send,
-                                limp._scheduling.receive,
-                                sum_stats,
-                                limp._scheduling.receive,
-                                normalize,
-                                limp._scheduling.receive,
-                                diff],
-                               [stats,
-                                limp._scheduling.send,
-                                limp._scheduling.receive,
-                                limp._scheduling.receive,
-                                normalize,
-                                limp._scheduling.send],
-                               [square,
-                                limp._scheduling.send],
-                               [square,
-                                limp._scheduling.send]]
-
-task_ids_1_ = [['stats_1', None, None, 4, None, 5, None, 'final'],
-               ['stats_0', None, None, None, 6, None],
-               [2, None],
-               [3, None]]
-
-task_ids_1 = [['stats_1',
-               ('stats_1', [6]),
-               ('stats_0', [4]),
-               4,
-               (2, [5]),
-               5,
-               (6, ['final']),
-               'final'],
-              ['stats_0',
-               ('stats_0', [4]),
-               (3, [6]),
-               ('stats_1', [6]),
-               6,
-               (6, ['final'])],
-              [2,
-               (2, [5])],
-              [3,
-               (3, [6])]]
-
-test_graph_2 = {0: (square, {'x': test_x[0]}, 13),
-                1: (square, {'x': test_x[0]}, 16),
-                2: (stats, {'x': limp.Dependency(0, None, 4)}, 28),
-                3: (stats, {'x': limp.Dependency(1, None, 2)}, 21),
-                4: (normalize,
-                    {'x': test_x[0],
-                     'mu': limp.Dependency(2, ('dummy', 'mu'), 5),
-                     'var': limp.Dependency(2, ('dummy', 'var'), 5)}, 17),
-                5: (normalize,
-                    {'x': test_x[1],
-                     'mu': limp.Dependency(3, ('dummy', 'mu'), 8),
-                     'var': limp.Dependency(3, ('dummy', 'var'), 8)}, 22),
-                6: (stats, {'x': limp.Dependency(1, None, 3)}, 15)}
-
-reduced_graph_1 = {0: (square, {'x': test_x[0]}, 16),
-                   2: (stats, {'x': limp.Dependency(0, None, 4)}, 28),
-                   4: (normalize,
-                       {'x': test_x[0],
-                        'mu': limp.Dependency(2, ('dummy', 'mu'), 5),
-                        'var': limp.Dependency(2, ('dummy', 'var'), 5)}, 17),
-                   5: (normalize,
-                       {'x': test_x[1],
-                        'mu': limp.Dependency(2, ('dummy', 'mu'), 8),
-                        'var': limp.Dependency(2, ('dummy', 'var'), 8)}, 22)}
-
-multiplexing_keys_1 = {0: [1], 2: [3, 6]}
-
-
-# ## Tests for helper functions
+# Helper function tests
 
 def test_overlaps_preceding():
     assert not limp._scheduling.overlaps((0, 23, 45.2), (1, 45.2, 67))
@@ -267,9 +143,7 @@ def test_add_slot_immediately_following():
                                      schedule) == new_schedule
 
 
-def test_upward_rank():
-    assert limp._scheduling.upward_rank(test_graph_1) == upward_rank_1
-
+# Preprocessing tests
 
 def test_relabel_dependencies_dict():
     args = {'a': limp.Dependency('task_0', 6)}
@@ -290,6 +164,36 @@ def test_remove_duplicates():
         limp._scheduling.remove_duplicates(test_graph_2)
     assert reduced_graph == reduced_graph_1
     assert multiplexing_keys == multiplexing_keys_1
+
+
+def test_prefix():
+    test_graph = {0: (square_one, 4, 2), 1: (add, (7, 5), 1)}
+    assert limp.prefix(test_graph, 'a') == {('a', 0): (square_one, 4, 2),
+                                            ('a', 1): (add, (7, 5), 1)}
+
+
+def test_prefix_with_dependencies():
+    test_graph = {0: (square_one, 4, 2),
+                  1: (add, (limp.Dependency(0, None, 1), 5), 1)}
+    test_graph_prefixed = {('a', 0): (square_one, 4, 2),
+                           ('a', 1): (add,
+                                      (limp.Dependency(('a', 0), None, 1), 5),
+                                      1)}
+    assert limp.prefix(test_graph, 'a') == test_graph_prefixed
+
+
+def test_prefix_extend():
+    test_graph = {('a', 0): (square_one, 4, 2),
+                  1: (add, (7, 5), 1)}
+    test_graph_prefixed = {('foo', 'a', 0): (square_one, 4, 2),
+                           ('foo', 1): (add, (7, 5), 1)}
+    assert limp.prefix(test_graph, 'foo') == test_graph_prefixed
+
+
+# Scheduling tests
+
+def test_upward_rank():
+    assert limp._scheduling.upward_rank(test_graph_1) == upward_rank_1
 
 
 def test_eft():

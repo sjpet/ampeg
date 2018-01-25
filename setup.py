@@ -25,4 +25,5 @@ setup(name='limp',
       #              'License :: OSI Approved :: MIT License',
       #              'Topic :: Scientific/Engineering',
       #              'Programming Language :: Python :: 3'],
-      install_requires=[])
+      install_requires=[],
+      tests_require=['pytest'])

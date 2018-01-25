@@ -8,123 +8,18 @@ import sys
 
 import pytest
 
-from .context import limp
-from .helpers import (id_,
-                      div,
-                      add,
-                      square_one,
-                      stats,
-                      square,
-                      sum_stats,
-                      normalize,
-                      diff)
+import limp
 
-# ## Test graphs and vectors
-test_x = [[0, 6, 2, 6, 1, 2, 3, 7, 2, 3, 1, 5, 6, 2, 8],
-          [1, 4, 5, 2, 3, 1, 4, 4, 3, 2, 5, 6, 3, 2, 1]]
-
-test_graph_1 = {'stats_0': (stats, {'x': test_x[0]}, 13),
-                'stats_1': (stats, {'x': test_x[1]}, 52),
-                2: (square, (test_x[0],), 64),
-                3: (square, {'x': test_x[1]}, 38),
-                4: (sum_stats,
-                    (limp.Dependency('stats_0', ('dummy', 'mu'), 5),
-                     limp.Dependency('stats_1', ('dummy', 'mu'), 3),
-                     limp.Dependency('stats_0', ('dummy', 'var')),
-                     limp.Dependency('stats_1', ('dummy', 'var'))),
-                    56),
-                5: (normalize,
-                    {'x': limp.Dependency(2, None, 13),
-                     'mu': limp.Dependency(4, 0, 6),
-                     'var': limp.Dependency(4, 1)},
-                    75),
-                6: (normalize,
-                    {'x': limp.Dependency(3, None, 7),
-                     'mu': limp.Dependency('stats_1', ('dummy', 'mu'), 8),
-                     'var': limp.Dependency('stats_1', ('dummy', 'var'))},
-                    75),
-                'final': (diff,
-                          {'x': limp.Dependency(5, 'y', 12),
-                           'y': limp.Dependency(6, 'y', 10)},
-                          42)}
-
-stats_0 = stats(test_x[0])
-stats_1 = stats(test_x[1])
-squared_0 = square(test_x[0])
-squared_1 = square(test_x[1])
-summed_stats = sum_stats(stats_0['dummy']['mu'],
-                         stats_1['dummy']['mu'],
-                         stats_0['dummy']['var'],
-                         stats_1['dummy']['var'])
-norm_0 = normalize(squared_0, *summed_stats)
-norm_1 = normalize(squared_1, stats_1['dummy']['mu'], stats_1['dummy']['var'])
-
-
-results_1 = {'stats_0': stats_0,
-             'stats_1': stats_1,
-             2: squared_0,
-             3: squared_1,
-             4: summed_stats,
-             5: norm_0,
-             6: norm_1,
-             'final': diff(norm_0['y'], norm_1['y'])}
-
-results_1_filtered = {'stats_0': stats_0,
-                      'stats_1': stats_1,
-                      'final': diff(norm_0['y'], norm_1['y'])}
-
-costs_1 = {'stats_0': (None, {}),
-           'stats_1': (None, {}),
-           2: (None, {}),
-           3: (None, {}),
-           4: (None, {'stats_0': None}),
-           5: (None, {2: None}),
-           6: (None, {'stats_1': None, 3: None}),
-           'final': (None, {6: None})}
-
-test_graph_2_a = {0: (id_, [[]], 1),
-                  1: (sum, (limp.Dependency(0, None, 1),), 4),
-                  2: (len, (limp.Dependency(0, None, 1),), 2),
-                  3: (div, (limp.Dependency(1, None, 1),
-                            limp.Dependency(2, None, 1)), 6),
-                  4: (add, (limp.Dependency(1, None, 1),
-                            limp.Dependency(2, None, 1)), 3),
-                  5: (square_one, (limp.Dependency(3, None, 1),), 2),
-                  6: (square_one, (limp.Dependency(4, None, 1),), 2)}
-
-test_graph_2_b = {0: (id_, [[]], 1),
-                  1: (sum, (limp.Dependency(0, None, 1),), 4),
-                  2: (len, (limp.Dependency(0, None, 1),), 2),
-                  3: (div, (limp.Dependency(1, None, 1),
-                            limp.Dependency(2, None, 1)), 3),
-                  4: (add, (limp.Dependency(1, None, 1),
-                            limp.Dependency(2, None, 1)), 6),
-                  5: (square_one, (limp.Dependency(3, None, 1),), 2),
-                  6: (square_one, (limp.Dependency(4, None, 1),), 2)}
-
-try:
-    zero_div_error = sum([])/len([])
-except ZeroDivisionError as e:
-    zero_div_error = limp.Err(e)
-
-results_2 = {0: [],
-             1: 0,
-             2: 0,
-             3: zero_div_error,
-             4: 0,
-             5: limp.Err(limp.DependencyError.default(zero_div_error)),
-             6: 0}
-
-timeout_error = limp.Err(limp.TimeoutError.default(1))
-recv_timeout_error = limp.Err(limp.TimeoutError.default(None))
-dep_timeout_error = limp.Err(limp.DependencyError.default(recv_timeout_error))
-results_2_timeout = {0: [],
-                     1: 0,
-                     2: timeout_error,
-                     3: timeout_error,
-                     4: dep_timeout_error,
-                     5: timeout_error,
-                     6: dep_timeout_error}
+from .data import (test_graph_1,
+                   test_graph_1_nested,
+                   results_1,
+                   results_1_filtered,
+                   results_1_nested,
+                   costs_1,
+                   test_graph_2_a,
+                   test_graph_2_b,
+                   results_2,
+                   results_2_timeout)
 
 
 # DependencyError test
@@ -332,6 +227,44 @@ def test_expand_args_nested_dict_error_2():
         limp._execution.expand_args(args, results)
 
 
+# Collection tests
+
+def test_collect():
+    test_results = [[(4, 2), (6, 1), (2, 9)], [(1, 2), (-8, 5)]]
+    test_task_ids = [['a', 'b', 'e'], ['c', 'd']]
+    test_results_collected = {'a': 4, 'b': 6, 'c': 1, 'd': -8, 'e': 2}
+    assert (limp._execution.collect_results(test_results, test_task_ids) ==
+            test_results_collected)
+
+
+def test_collect_tuple_keys():
+    test_results = [[(4, 2), (6, 1), (2, 9)], [(1, 2), (-8, 5)]]
+    test_task_ids = [[('a', 0), ('a', 1), 'd'], ['b', 'c']]
+    test_results_collected = {('a', 0): 4,
+                              ('a', 1): 6,
+                              'b': 1,
+                              'c': -8,
+                              'd': 2}
+    assert (limp._execution.collect_results(test_results, test_task_ids) ==
+            test_results_collected)
+
+
+# Inflation tests
+
+def test_inflate():
+    test_results = {(0, 0): 4, (0, 1): 3, 1: 6}
+    test_results_inflated = {0: {0: 4, 1: 3}, 1: 6}
+    assert (limp._execution.inflate_results(test_results) ==
+            test_results_inflated)
+
+
+def test_inflate_do_not_recurse():
+    test_results = {(0, (0, 0)): 4, (0, (0, 1)): 3, 1: 6}
+    test_results_inflated = {0: {(0, 0): 4, (0, 1): 3}, 1: 6}
+    assert (limp._execution.inflate_results(test_results) ==
+            test_results_inflated)
+
+
 # Execution tests
 
 def test_execution():
@@ -412,3 +345,9 @@ def test_execution_child_process_killed():
     results = limp.execute_task_lists(task_lists, task_ids, timeout=1)
     for key in results:
         assert results[key] == results_2_timeout[key]
+
+
+def test_execute_inflate():
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1_nested, 4)
+    results = limp.execute_task_lists(task_lists, task_ids, inflate=True)
+    assert results == results_1_nested
