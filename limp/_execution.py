@@ -20,15 +20,15 @@ def expand_args(args, results):
 
     Parameters
     ----------
-    args : any type t
+    args : Any
         A dict of keyword arguments, an iterable of arguments or a single
         argument
-    results : [result]
+    results : List[Any]
         A list of results
 
     Returns
     -------
-    t
+    Any
         Input argument(s) with any dependencies replaced
     """
 
@@ -56,14 +56,14 @@ def expand_recursively(result, keys):
 
     Parameters
     ----------
-    result : dict or iterable
+    result : Iterable[Any]
         A result
-    keys : iterable
+    keys : Iterable[Hashable]
         A list of keys to apply in order
 
     Returns
     -------
-    value
+    Any
         The dependency value
     """
 
@@ -82,12 +82,12 @@ def inflate_results(results):
 
     Parameters
     ----------
-    results : dict
+    results : Dict[Hashable, Any]
         A flat dict of results
 
     Returns
     -------
-    dict
+    Dict[Any]
         A nested dict of results
     """
     inflated_results = {}
@@ -113,19 +113,23 @@ def collect_results(results, task_ids):
     ----------
     results : List[List[Any]]
         A nested list of execution results
-    task_ids : List[List[task ID]]
+    task_ids : Union[\
+            List[List[Union[Hashable, List[Hashable], Communication]]], None]
         A nested list of task IDs
 
     Returns
     -------
-    dict
-        A nested dict of results
+    Dict[Hashable, Any]
     """
     results_ = {}
     iterator = enumerate(results) if task_ids is None \
         else zip(task_ids, results)
     for task_ids_k, results_k in iterator:
-        for task, result in zip(task_ids_k, results_k):
+        if task_ids is None:
+            inner_ids = ((task_ids_k, q) for q in range(len(results_k)))
+        else:
+            inner_ids = task_ids_k
+        for task, result in zip(inner_ids, results_k):
             if isinstance(task, Communication):
                 pass
             elif isinstance(task, list):
@@ -143,14 +147,15 @@ def costs_dict(results, task_ids):
 
     Parameters
     ----------
-    results : [[(result, time)]]
+    results : List[List[(Any, float)]]
         A nested list of task_ids to sort execution results
-    task_ids : [[task_id, [task_id] or Communication]], optional
+    task_ids : Union[\
+            List[List[Union[Hashable, List[Hashable], Communication]]], None]
         A nested list of task_ids to sort execution results
 
     Returns
     -------
-    dict
+    Dict[Hashable, (float, Dict[Hashable, float])]
         Approximate costs in a dict with task IDs as keys and tuples of
         (computational cost, {dependency: communication cost}) as values
     """
@@ -160,7 +165,11 @@ def costs_dict(results, task_ids):
     iterator = enumerate(results) if task_ids is None \
         else zip(task_ids, results)
     for task_ids_k, results_k in iterator:
-        for task, result in zip(task_ids_k, results_k):
+        if task_ids is None:
+            inner_ids = ((task_ids_k, q) for q in range(len(results_k)))
+        else:
+            inner_ids = task_ids_k
+        for task, result in zip(inner_ids, results_k):
             if isinstance(task, Communication):
                 sender, recipients = task
                 for recipient in recipients:
@@ -171,7 +180,7 @@ def costs_dict(results, task_ids):
                             costs_[recipient][1][sender] = result[1]
                     else:
                         costs_[recipient] = (None, {sender: result[1]})
-            elif is_iterable(task):
+            elif isinstance(task, list):
                 costs_[task[0]] = (result[1],
                                    costs_[task[0]][1] if task[0] in costs_
                                    else {})
@@ -192,19 +201,19 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
 
     Parameters
     ----------
-    task_list : [(function, kwargs)]
-        A list of tasks and their kwargs
+    task_list : List[(Callable, Any)]
+        A list of tasks and their arguments
     lock : Optional[multiprocessing.Lock]
         A lock used to synchronize return of the result to a master process
     pipe : Optional[multiprocessing.Pipe]
         A pipe used to return the result list to a master process
-    costs : bool, optional
+    costs : Optional[bool]
         Include start and end times for each task
 
     Returns
     -------
-    [dict]
-        A list of result dicts
+    List[Union[(Any, Number), (Any,)]]
+        A list of results
     """
 
     results = []
@@ -244,29 +253,29 @@ def execute_task_lists(task_lists,
 
     Parameters
     ----------
-    task_lists : List[List[(function, kwargs)]]
-        A nested list of tasks and their kwargs
-    task_ids : Optional[List[List[Union[task_id, [task_id], Communication]]]]
-        A nested list of task_ids to sort execution results
+    task_lists : List[List[(Callable, Any)]]
+        A list of task lists.
+    task_ids : Optional[\
+            List[List[Union[Hashable, List[Hashable], Communication]]]]
+        A list of lists for mapping execution results to task IDs. Default is
+        None.
     inflate : Optional[bool]
         Inflate tuple keys in the results if True. Default is False.
     costs : Optional[bool]
         Include approximate costs if True. Default is False.
-    timeout : Optional[int]
+    timeout : Optional[Number]
         Timeout in seconds for collecting results from spawned processes,
         default is 60.
 
     Returns
     -------
-    dict
-        The result dict. If task_ids is not None, the keys are task IDs and the
-        values task results, otherwise the keys are process indices and the
-        values are lists of task results. In addition, if costs is True, there
-        is a key named "costs", the value of which is another dict. If task_ids
-        is not None, the keys of this dict are Task IDs and the values are
-        tuples of (computation cost, [dependency, communication cost]),
-        otherwise the keys are process indices and the values are lists of
-        execution times.
+    Dict[Hashable, Any]
+        A dict of results. where the keys are task IDs and the values task
+        results. If ``task_ids`` is None, the task ID is (process index,
+        task index in process). In addition, if costs is True, there
+        is a key named "costs", the value of which is another dict with the
+        same keys and nesting, and tuples of (computation cost, [(predecessor
+        task ID, communication cost)]) as values.
     """
 
     n_processes = len(task_lists)
@@ -320,6 +329,10 @@ def execute_task_lists(task_lists,
                       "instead"
             raise UserWarning(message.format(costs_key=costs_key))
 
-        results_["costs"] = costs_dict(results, task_ids)
+        if inflate is True:
+            results_[costs_key] = inflate_results(costs_dict(results,
+                                                             task_ids))
+        else:
+            results_[costs_key] = costs_dict(results, task_ids)
 
     return results_

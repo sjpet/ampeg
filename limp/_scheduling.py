@@ -23,12 +23,12 @@ def add_process_index(t, p):
 
     Parameters
     ----------
-    t : (task_id, Float, Float)
-    p : Int
+    t : (Hashable, float, float)
+    p : int
 
     Returns
     -------
-    (task_id, Int, Float, Float)
+    (Hashable, int, float, float)
     """
     return t[0], p, t[1], t[2]
 
@@ -38,9 +38,9 @@ def overlaps(slot_a, slot_b):
 
     Parameters
     ----------
-    slot_a : (task_id, Float, Float)
+    slot_a : (Hashable, float, float)
         The first slot, given as a (task, start, finish)-tuple
-    slot_b : (task_id, Float, Float)
+    slot_b : (Hashable, float, float)
         The second slot, given as a (task, start, finish)-tuple
 
     Returns
@@ -63,9 +63,9 @@ def precedes(slot_a, slot_b):
 
     Parameters
     ----------
-    slot_a : (Int, Float, Float)
+    slot_a : (int, float, float)
         The first slot, given as a (task, start, finish)-tuple
-    slot_b : (Int, Float, Float)
+    slot_b : (int, float, float)
         The second slot, given as a (task, start, finish)-tuple
 
     Returns
@@ -88,14 +88,15 @@ def relabel_dependencies(args, labels):
 
     Parameters
     ----------
-    args : Union[dict, list, tuple, set]
-        A dict of keyword arguments or an iterable of arguments
-    labels : dict
-        A dict of task reference replacements
+    args : Any
+        A single argument, an iterable of positional arguments or a dict of
+        keyword arguments
+    labels : Dict[Hashable, Hashable]
+        A dict of task ID replacements
 
     Returns
     -------
-    Union[dict, list, tuple, set]
+    Any
         A new dict or iterable of arguments
     """
 
@@ -120,7 +121,7 @@ def list_dependencies(args):
 
     Returns
     -------
-    list
+    List[Hashable]
         A list of dependencies
     """
 
@@ -136,7 +137,7 @@ def list_dependencies(args):
         return []
 
     for val in iterable_args:
-        if isinstance(val, dict):
+        if isinstance(val, dict) or is_iterable(val):
             dependencies.extend(list_dependencies(val))
         elif isinstance(val, Dependency):
             dependencies.append(val.task_id)
@@ -149,13 +150,13 @@ def successor_graph(graph):
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
         vertex represents a computational task
 
     Returns
     -------
-    dict
+    Dict[Hashable, List[Hashable]]
         A simplified graph including showing only successor tasks for each task
     """
 
@@ -169,13 +170,13 @@ def predecessor_graph(graph):
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
         vertex represents a computational task
 
     Returns
     -------
-    dict
+    Dict[Hashable, List[Hashable]]
         A simplified graph including showing only predecessor tasks for each
         task
     """
@@ -187,13 +188,14 @@ def list_communication_costs(args):
 
     Parameters
     ----------
-    args : dict or iterable
-        A dict of keyword arguments or an iterable of arguments
+    args : Any
+        A single argument, an iterable of arguments or a dict of keyword
+        arguments
 
     Returns
     -------
-    list
-        A list of dependencies
+    List[(Hashable, float)]
+        A list of communication costs
     """
 
     communication_costs = {}
@@ -208,7 +210,7 @@ def list_communication_costs(args):
         return 0
 
     for val in iterable_args:
-        if isinstance(val, dict):
+        if isinstance(val, dict) or is_iterable(val):
             for key, max_val in list_communication_costs(val):
                 if key in communication_costs:
                     communication_costs[key].append(max_val)
@@ -229,15 +231,15 @@ def costs(graph):
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
         vertex represents a computational task and each edge a dependency
 
     Returns
     -------
-    dict
+    Dict[Hashable, float]
         A dict of computational costs per task
-    dict
+    Dict[Hashable, List[(Hashable, float)]
         A dict of communication costs per task
     """
 
@@ -253,20 +255,20 @@ def generate_task_lists(graph, schedule, timeout):
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
         vertex represents a computational task
-    schedule : [[(Int, Float, Float)]]
+    schedule : [[(Hashable, Number, Number)]]
         Task schedule represented as a nested list of (task, start, finish)-
         tuples, one list per processor
-    timeout : int or None
+    timeout : Number
         Timeout for receive tasks
 
     Returns
     -------
-    [[(function, kwargs)]]
+    List[List[(Callable, Any)]]
         A set of task lists
-    [[task_id]]
+    List[List[Hashable]]
         A nested list for mapping execution results to task IDs
     """
 
@@ -346,14 +348,14 @@ def multiplex_task_ids(task_ids, multiplexing_keys):
 
     Parameters
     ----------
-    task_ids : [[task_id]]
+    task_ids : List[List[Hashable]]
         A nested list for mapping execution results to task IDs
-    multiplexing_keys : dict
+    multiplexing_keys : Dict[Hashable, List[Hashable]]
         A dict of multiplexing keys
 
     Returns
     -------
-    [[task_id or (task_id,)]]
+    List[List[Union[Hashable, Tuple[Hashable, ...]]]
         A nested list for mapping execution results to task IDs, including
         multiplexed tasks
     """
@@ -366,26 +368,28 @@ def multiplex_task_ids(task_ids, multiplexing_keys):
     for k in range(len(task_ids_)):
         for kk in range(len(task_ids_[k])):
             this_task_id = task_ids_[k][kk]
-            if this_task_id in multiplexing_keys:
-                task_ids_[k][kk] = (this_task_id,) + \
+            if (not isinstance(this_task_id, Communication) and
+                    this_task_id in multiplexing_keys):
+                task_ids_[k][kk] = [this_task_id] + \
                                    multiplexing_keys[this_task_id]
 
     return task_ids_
 
 
 def filter_task_ids(task_ids, output_tasks):
-    """Filter task ids, leaving only output tasks.
+    """Filter task IDs, replacing the ID of non-output tasks with None.
 
     Parameters
     ----------
-    task_ids : [[task_id or (task_id,)]]
+    task_ids : List[List[Union[Hashable, Tuple[Hashable, ...]]]
         A nested list for mapping execution results to task IDs
-    output_tasks : [task_id]
+    output_tasks : List[Hashable]
         A list of output tasks
 
     Returns
     -------
-    [[task_id or (task_id,)]]
+    List[List[Union[Hashable, Tuple[Hashable, ...]]]
+        A filtered,  nested list for mapping execution results to task IDs
     """
     if output_tasks is None:
         return task_ids
@@ -417,14 +421,14 @@ def idle_slots(schedule):
 
     Parameters
     ----------
-    schedule : [(Int, Float, Float)]
+    schedule : List[(Hashable, float, float)]
         Single processor task schedule represented as a list of
         (task, start, finish)-tuples
 
     Returns
     -------
-    [(float, float)]
-        List of (start, length)-tuples
+    List[(float, float)]
+        List of (start, finish)-tuples
     """
 
     idle_schedule = []
@@ -445,23 +449,23 @@ def idle_slots(schedule):
 
 
 def add_slot(task, start, finish, schedule):
-    """Add a new slot to a single processor schedule.
+    """Add a new slot to a single process schedule.
 
     Parameters
     ----------
-    task : Int
-        Index of the task
-    start : Float
+    task : Hashable
+        ID of the task
+    start : float
         Starting time
-    finish : Float
+    finish : float
         Finish time
-    schedule : [(Int, Float, Float)]
+    schedule : List[(Hashable, float, float)]
         Single processor task schedule represented as a list of
         (task, start, finish)-tuples
 
     Returns
     -------
-    [(Int, Float, Float)]
+    List[(Hashable, float, float)]
         Updated schedule
     """
 
@@ -486,18 +490,19 @@ def available(min_length, schedule):
     ----------
     min_length : float
         The required length
-    schedule : [(Int, Float, Float)]
+    schedule : [(Hashable, float, float)]
         Single processor task schedule represented as a list of
         (task, start, finish)-tuples
 
     Returns
     -------
-    Float
+    float
+        Start of the earliest available, sufficiently long time slot
     """
 
     for time_slot in idle_slots(schedule):
-        start_time, length = time_slot
-        if length >= min_length:
+        start_time, end_time = time_slot
+        if end_time - start_time >= min_length:
             return start_time
 
     raise ValueError("No available time slot found.")
@@ -508,17 +513,17 @@ def actual_finish_time(task, schedule):
 
     Parameters
     ----------
-    task : Int
-        Index of the task
-    schedule : [[(Int, Float, Float)]]
+    task : Hashable
+        Task ID
+    schedule : [[(Hashable, float, float)]]
         Task schedule represented as a nested list of (task, start, finish)-
         tuples, one list per processor
 
     Returns
     -------
-    Float
+    float
         Task finish time
-    Int
+    int
         Index of the processor on which the task is executed
     """
 
@@ -542,21 +547,22 @@ def est(task,
 
     Parameters
     ----------
-    task : Int
-        Index of the task
-    processor : Int
+    task : Hashable
+        Task ID
+    processor : int
         Index of the processor
-    dependencies : Iterable[Int]
-        Indices of predecessor tasks
-    computation_costs : Array-like
+    dependencies : List[Hashable]
+        Predecessor tasks IDs
+    computation_costs : Dict[Hashable, float]
         Computational costs per task
-    communication_costs : Array-like
+    communication_costs : Dict[Hashable, List[(Hashable, float)]
         Communication costs per task
-    schedule : Array-like
+    schedule : List[(Hashable, float, float)]
 
     Returns
     -------
-    Float
+    float
+        Earliest start time
     """
 
     est_candidates = []
@@ -584,15 +590,18 @@ def prefix(graph, prefix_key):
 
     Parameters
     ----------
-    graph :  dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
-        vertex represents a computational task
-    prefix_key : Any hashable
+        vertex represents a computational task. The graph is represented by a
+        dict with task IDs as keys and tuples of (function, arguments,
+        computational cost) as values. Edges are implied by ``Dependency``
+        instances among arguments.
+    prefix_key : Hashable
 
     Returns
     -------
-    dict
-        A new graph with prefixed task IDs
+    Dict[Hashable, (Callable, Any, Number)]
+        A new graph with the task IDs prefixed.
     """
     prefixed_graph = {}
     for key, val in graph.iteritems():
@@ -607,15 +616,15 @@ def prefix_dependencies(args, prefix_key):
 
     Parameters
     ----------
-    args : Any type T
+    args : Any
         A single argument, an iterable of arguments or a dict of keyword
         arguments
-    prefix_key : Any hashable
+    prefix_key : Hashable
         A dict of task reference replacements
 
     Returns
     -------
-    T
+    Any
         A new dict or iterable of arguments
     """
 
@@ -635,12 +644,12 @@ def prefix_single(task_id, prefix_key):
 
     Parameters
     ----------
-    task_id : Any hashable
-    prefix_key: Any hashable
+    task_id : Hashable
+    prefix_key: Hashable
 
     Returns
     -------
-    tuple
+    Tuple[Hashable, ...]
     """
     if isinstance(task_id, tuple):
         return tuple([prefix_key] + list(task_id))
@@ -649,20 +658,25 @@ def prefix_single(task_id, prefix_key):
 
 
 def remove_duplicates(graph):
-    """Remove duplicate tasks from a graph.
+    """Remove duplicate tasks from a ``graph``.
+
+    This is done automatically by ``limp.earliest_finish_time``.
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
-        vertex represents a computational task
+        vertex represents a computational task. The graph is represented by a
+        dict with task IDs as keys and tuples of (function, arguments,
+        computational cost) as values. Edges are implied by ``Dependency``
+        instances among arguments.
 
     Returns
     -------
-    dict
-        An equivalent graph without duplicates
-    dict
-        A dict of multiplexing keys from the shortened to the original graph
+    Dict[Hashable, (Callable, Any, Number)]
+        An equivalent graph without duplicates.
+    Dict[Hashable, List[Hashable]]
+        A dict of multiplexing keys from the shortened to the original graph.
     """
 
     graph_ = graph.copy()
@@ -722,7 +736,7 @@ def send(result, pipe):
 
     Parameters
     ----------
-    result : dict
+    result : Any
     pipe : multiprocessing.Pipe
     """
 
@@ -736,12 +750,12 @@ def receive(pipe, timeout=60):
     Parameters
     ----------
     pipe : multiprocessing.Pipe
-    timeout : int, optional
+    timeout : Optional[int]
         Maximum time allowed in seconds, default is 60
 
     Returns
     -------
-    dict
+    Any
     """
 
     if pipe.poll(timeout) is False:
@@ -756,23 +770,24 @@ def add_task_eft(task,
                  computation_costs,
                  communication_costs,
                  schedule):
-    """Add a task
+    """Add a task to a ``schedule``.
 
     Parameters
     ----------
-    task : Int
-        Index of the task
-    dependencies : Iterable[Int]
-        Indices of predecessor tasks
-    computation_costs : Array-like
+    task : Hashable
+        Task ID
+    dependencies : List[Hashable]
+        Predecessor task IDs
+    computation_costs : Dict[Hashable, float]
         Computational costs per task
-    communication_costs : Array-like
+    communication_costs : Dict[Hashable, List[(Hashable, float)]
         Communication costs per task
-    schedule : Array-like
+    schedule : List[List[(Hashable, float, float)]]
+        Schedule
 
     Returns
     -------
-    [[(Int, Float, Float)]]
+    List[List[(Hashable, float, float)]]
         Updated schedule
     """
 
@@ -800,14 +815,14 @@ def upward_rank(graph):
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
         vertex represents a computational task and each edge indicates a
         successor task
 
     Returns
     -------
-    dict
+    Dict[Hashable, float]
         A dict containing the rank of each task
     """
 
@@ -842,31 +857,30 @@ def upward_rank(graph):
 
 
 def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=60):
-    """Generate a set of task lists from a graph.
+    """Generate a list of ``n_processes`` task lists from a ``graph``.
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, (Callable, Any, Number)]
         A directed acyclic graph representing the computations where each
         vertex represents a computational task. The graph is represented by a
-        dict with task IDs as keys and tuples of
-        (function, parameters, computational cost) as values. `parameters` can
-        be dict or another iterable containing any mix of concrete values and
-        `Dependency` instances.
-    n_processes : Int
-        Number of processes to use
-    output_tasks : list, optional
+        dict with task IDs as keys and tuples of (function, arguments,
+        computational cost) as values. Edges are implied by ``Dependency``
+        instances among arguments.
+    n_processes : int
+        Number of processes to use for execution.
+    output_tasks : Optional[List[Hashable]]
         A list of output tasks. Default is None, which considers all tasks to
-        be output tasks
-    timeout : int, optional
-        Timeout for receive tasks, default is 60
+        be output tasks.
+    timeout : Optional[Number]
+        Timeout in seconds for receive tasks, default is 60.
 
     Returns
     -------
-    [[(function, kwargs)]]
-        A list of task lists
-    [[task_id, [task_id] or Communication]]
-        A nested list for mapping execution results to task IDs
+    List[List[(Callable, Any)]]
+        A list of task lists.
+    List[List[Union[Hashable, List[Hashable], Communication]]]
+        A list of lists for mapping execution results to task IDs.
     """
 
     graph_, multiplexing_keys = remove_duplicates(graph)

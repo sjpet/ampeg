@@ -125,6 +125,14 @@ costs_1 = {'stats_0': (None, {}),
            6: (None, {'stats_1': None, 3: None}),
            'final': (None, {6: None})}
 
+costs_1_nested = {'stats': {0: (None, {}), 1: (None, {})},
+                  'square': {0: (None, {}), 1: (None, {})},
+                  4: (None, {('stats', 0): None}),
+                  'normalize': {0: (None, {('square', 0): None}),
+                                1: (None, {('stats', 1): None,
+                                           ('square', 1): None})},
+                  'final': (None, {('normalize', 1): None})}
+
 computation_costs_1 = {'stats_0': 13,
                        'stats_1': 52,
                        2: 64,

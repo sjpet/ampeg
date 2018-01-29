@@ -1,5 +1,6 @@
-Limp
-====
+==================
+Limp Documentation
+==================
 
 :Version: |version|
 
@@ -7,14 +8,14 @@ Tutorial
 --------
 .. toctree::
    :maxdepth: 1
-   getting_started
+
+   basic_usage
+   advanced_topics
 
 
 API reference
 -------------
-
 .. toctree::
    :maxdepth: 1
-   :caption: Contents:
+
    limp
-   

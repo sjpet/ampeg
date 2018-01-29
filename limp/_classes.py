@@ -8,13 +8,24 @@ from collections import namedtuple
 
 
 class Err(object):
-    """A task result indicating that an exception was raised by the task."""
+    # noinspection PyUnresolvedReferences
+    """A task result indicating that an exception was raised by the task.
+
+    Attributes
+    ----------
+    err_type : Exception
+        The type of exception that was raised
+    message : str
+        Message of the exception
+    message_with_traceback : str
+        Message of the exception along with traceback information
+    """
 
     def __init__(self, err, traceback=None):
         # Deconstruct the exception since Python 2 can't unpickle them
         self.err_type = type(err)
         self.message = str(err)
-        self.traceback = traceback
+        self._traceback = traceback
 
     def __eq__(self, other):
         if not isinstance(other, Err):
@@ -46,13 +57,32 @@ class Err(object):
                                           line_no=level[1],
                                           module=level[2],
                                           expr=level[3])
-                         for level in self.traceback)
+                         for level in self._traceback)
 
 
 class Dependency(namedtuple("Dependency",
                             ("task_id", "key", "communication_cost"))):
-    """A named tuple that defines a dependency on some other task in the
-    same graph."""
+    """A triple of (task ID, key, communication cost).
+
+    The key may be a single
+    key, index or slice, or it may be an iterable of such types to be applied
+    in sequence. For example, the key ``('values', 2)`` extracts the value 5
+    from the dict ``{'values': [1, 3, 5]}``. The key may also be ``None``,
+    indicating that the entire return value of the predecessor shall be used.
+
+    Communication cost is optional and defaults to 0.
+
+    Examples
+    --------
+    >>> import limp
+    >>> limp.Dependency("task_0", None) == \\
+    ...     limp.Dependency("task_0", None, 0)
+    True
+
+    >>> _ = limp.Dependency("task_0",
+    ...                     [("first", "second"),
+    ...                      slice(2, 5)])
+    """
 
     def __new__(cls, task_id, key, communication_cost=0):
         return super(Dependency, cls).__new__(cls,
@@ -63,4 +93,12 @@ class Dependency(namedtuple("Dependency",
     def __eq__(self, other):
         return (self[0], self[1]) == (other[0], other[1])
 
-Communication = namedtuple("Communication", ("sender", "recipients"))
+
+class Communication(namedtuple("Communication", ("sender", "recipients"))):
+    """A pair of (sender, recipients).
+
+    Sender is a single task ID and recipients is a list of task IDs. This named
+    tuple is used in place of task ID for send- and receive tasks in task
+    lists. Only advanced users wishing to estimate communication costs in
+    handcrafted task list need worry about it.
+    """

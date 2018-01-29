@@ -108,6 +108,19 @@ def test_successor_graph():
     assert limp._scheduling.successor_graph(test_graph_1) == successor_graph_1
 
 
+def test_successor_graph_nested_dependencies():
+    test_graph = {('a', 0): (square_one, 3, 1),
+                  ('b', 0): (square_one, 2, 1),
+                  ('sums', 0): (sum,
+                                ([limp.Dependency(('a', 0), None, 1),
+                                  limp.Dependency(('b', 0), None, 1)],),
+                                1)}
+    successor_graph = {('a', 0): [('sums', 0)],
+                       ('b', 0): [('sums', 0)],
+                       ('sums', 0): []}
+    assert limp._scheduling.successor_graph(test_graph) == successor_graph
+
+
 def test_costs():
     x, y = limp._scheduling.costs(test_graph_1)
     assert x == computation_costs_1
@@ -127,6 +140,16 @@ def test_idle_slots_empty_schedule():
     assert limp._scheduling.idle_slots([]) == [(0, inf)]
 
 
+def test_available_idle_slot_too_short():
+    test_schedule = [(None, 0.0, 1.2), (None, 2.8, 3.6)]
+    assert limp._scheduling.available(2.0, test_schedule) == 3.6
+
+
+def test_available_idle_slot_sufficient():
+    test_schedule = [(None, 0.0, 1.2), (None, 3.3, 3.9)]
+    assert limp._scheduling.available(2.0, test_schedule) == 1.2
+
+
 def test_add_slot_to_empty_schedule():
     assert limp._scheduling.add_slot('task_name',
                                      12.8,
@@ -140,6 +163,15 @@ def test_add_slot_immediately_following():
     assert limp._scheduling.add_slot('new_task_name',
                                      56.2,
                                      76.1,
+                                     schedule) == new_schedule
+
+
+def test_add_slot_in_idle():
+    schedule = [('task_name', 12.8, 56.2)]
+    new_schedule = [('new_task_name', 0.0, 10.3), ('task_name', 12.8, 56.2)]
+    assert limp._scheduling.add_slot('new_task_name',
+                                     0.0,
+                                     10.3,
                                      schedule) == new_schedule
 
 

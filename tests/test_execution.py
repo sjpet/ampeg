@@ -16,6 +16,7 @@ from .data import (test_graph_1,
                    results_1_filtered,
                    results_1_nested,
                    costs_1,
+                   costs_1_nested,
                    test_graph_2_a,
                    test_graph_2_b,
                    results_2,
@@ -249,6 +250,17 @@ def test_collect_tuple_keys():
             test_results_collected)
 
 
+def test_collect_no_task_ids():
+    test_results = [[(4, 2), (6, 1), (2, 9)], [(1, 2), (-8, 5)]]
+    test_results_collected = {(0, 0): 4,
+                              (0, 1): 6,
+                              (1, 0): 1,
+                              (1, 1): -8,
+                              (0, 2): 2}
+    assert (limp._execution.collect_results(test_results, None) ==
+            test_results_collected)
+
+
 # Inflation tests
 
 def test_inflate():
@@ -347,7 +359,37 @@ def test_execution_child_process_killed():
         assert results[key] == results_2_timeout[key]
 
 
-def test_execute_inflate():
+def test_execution_inflate():
     task_lists, task_ids = limp.earliest_finish_time(test_graph_1_nested, 4)
     results = limp.execute_task_lists(task_lists, task_ids, inflate=True)
     assert results == results_1_nested
+
+
+def test_execution_multiplexing_costs_inflate():
+    task_lists, task_ids = limp.earliest_finish_time(test_graph_1_nested, 4)
+    task_ids[0][0] = [task_ids[0][0], ('stats', 2)]
+    results_1_nested_ = results_1_nested.copy()
+    results_1_nested_['stats'][2] = results_1_nested['stats'][1]
+    costs_1_nested_ = costs_1_nested.copy()
+    costs_1_nested_['stats'][2] = costs_1_nested_['stats'][1]
+    results = limp.execute_task_lists(task_lists,
+                                      task_ids,
+                                      inflate=True,
+                                      costs=True)
+    costs = results.pop('costs')
+    assert results == results_1_nested_
+    assert set(costs.keys()) == set(costs_1_nested_.keys())
+    for key, val in costs.iteritems():
+        if isinstance(val, dict):
+            for key_, val_ in val.iteritems():
+                assert costs[key][key_][0] >= 0.0
+                assert set(costs[key][key_][1].keys()) == set(
+                    costs_1_nested_[key][key_][1].keys())
+                for key__ in costs[key][key_][1].keys():
+                    assert costs[key][key_][1][key__] >= 0.0
+        else:
+            assert costs[key][0] >= 0.0
+            assert set(costs[key][1].keys()) == set(
+                costs_1_nested_[key][1].keys())
+            for key_ in costs[key][1].keys():
+                assert costs[key][1][key_] >= 0.0

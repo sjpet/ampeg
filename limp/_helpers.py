@@ -17,7 +17,7 @@ def is_iterable(x):
 
     Parameters
     ----------
-    x : A
+    x : Any
 
     Returns
     -------
@@ -32,8 +32,12 @@ def recursive_map(f, x):
 
     Parameters
     ----------
-    f : fn(A) -> B
-    x : Union[dict, list, tuple, set, A]
+    f : Callable
+    x : Any
+
+    Returns
+    -------
+    Any
     """
 
     if isinstance(x, dict):
@@ -49,12 +53,12 @@ def reverse_graph(graph):
 
     Parameters
     ----------
-    graph : dict
+    graph : Dict[Hashable, List[Hashable]]
         A graph on the form {node: [successor]}
 
     Returns
     -------
-    dict
+    Dict[Hashable, List[Hashable]]
         A graph with all directions reversed
     """
     graph_ = {vertex: [] for vertex in graph}
@@ -71,8 +75,8 @@ def equivalent_args(args_0, args_1):
 
     Parameters
     ----------
-    args_0
-    args_1
+    args_0 : Any
+    args_1 : Any
 
     Returns
     -------
@@ -113,11 +117,11 @@ def demux(xs):
 
     Parameters
     ----------
-    xs: Iterable of tuples
+    xs: Iterable[Tuple[Hashable, Hashable]]
 
     Returns
     -------
-    [tuple]
+    List[Hashable]
     """
 
     demux_dict = {}
