@@ -35,11 +35,14 @@ def expand_args(args, results):
     def f(x):
         if isinstance(x, Dependency):
             if x[1] is None:
-                r = results[x[0]][0]
-            elif is_iterable(x[1]):
-                r = expand_recursively(results[x[0]][0], x[1])
+                r = results[x.task_id][0]
+            elif is_iterable(x.key):
+                r = expand_recursively(results[x.task_id][0], x.key)
             else:
-                r = results[x[0]][0][x[1]]
+                try:
+                    r = results[x.task_id][0][x.key]
+                except Exception as e:
+                    raise e
 
             if isinstance(r, Err):
                 raise DependencyError.default(r)
@@ -196,15 +199,13 @@ def costs_dict(results, task_ids):
     return costs_
 
 
-def execute_task_list(task_list, lock=None, pipe=None, costs=False):
+def execute_task_list(task_list, pipe=None, costs=False):
     """Sequentially execute a task list, handling any inter-task dependencies.
 
     Parameters
     ----------
     task_list : List[(Callable, Any)]
         A list of tasks and their arguments
-    lock : Optional[multiprocessing.Lock]
-        A lock used to synchronize return of the result to a master process
     pipe : Optional[multiprocessing.Pipe]
         A pipe used to return the result list to a master process
     costs : Optional[bool]
@@ -235,11 +236,9 @@ def execute_task_list(task_list, lock=None, pipe=None, costs=False):
         results.append((this_result,) if costs is False
                        else (this_result, this_end - this_start))
 
-    if lock is not None:
-        lock.acquire()
+    if pipe is not None:
         pipe.send(results)
         pipe.close()
-        lock.release()
 
     return results
 
@@ -283,34 +282,29 @@ def execute_task_lists(task_lists,
     # Set up pipes
     pipes = [[None for _ in range(n_processes)] for _ in range(n_processes)]
     for source in range(n_processes):
-        for sink in range(n_processes):
-            if source < sink:
-                x, y = mp.Pipe()
-                pipes[source][sink] = x
-                pipes[sink][source] = y
+        for sink in range(source + 1, n_processes):
+            x, y = mp.Pipe()
+            pipes[source][sink] = x
+            pipes[sink][source] = y
 
     # Start execution of other task lists
     p = [None for _ in range(n_processes)]
-    locks = [None for _ in range(n_processes)]
-
     for k in range(1, n_processes):
-        locks[k] = mp.Lock()
-        locks[k].acquire()
         p[k] = mp.Process(target=execute_task_list,
-                          args=(task_lists[k], locks[k], pipes[k][0], costs))
+                          args=(task_lists[k], pipes[k][0], costs))
         p[k].start()
 
     # Execute own task list
     results = [execute_task_list(task_lists[0], costs=costs)]
 
-    # Fetch results from child processes
+    # Fetch all results and join child processes
     for k in range(1, n_processes):
-        locks[k].release()
         if pipes[0][k].poll(timeout) is False:
             timeout_error = TimeoutError.default(k)
             results.append([(Err(timeout_error),) for _ in task_lists[k]])
         else:
             results.append(pipes[0][k].recv())
+        pipes[0][k].close()
         p[k].join()
 
     results_ = collect_results(results, task_ids)

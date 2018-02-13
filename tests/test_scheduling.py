@@ -130,6 +130,14 @@ def test_costs():
         assert set(y[key]) == set(communication_costs_1[key])
 
 
+def test_costs_single_dependency():
+    test_graph = {0: (lambda x: x, [1, 2, 3], 4),
+         1: (lambda x: x, limp.Dependency(0, 1, 3), 2)}
+    x, y = limp._scheduling.costs(test_graph)
+    assert x == {0: 4, 1: 2}
+    assert y == {0: [], 1: [(0, 3)]}
+
+
 def test_idle_slots():
     schedule = [(0, 0, 56.1), (1, 72.3, 89.3)]
     assert limp._scheduling.idle_slots(schedule) == [(56.1, 72.3),
@@ -142,12 +150,17 @@ def test_idle_slots_empty_schedule():
 
 def test_available_idle_slot_too_short():
     test_schedule = [(None, 0.0, 1.2), (None, 2.8, 3.6)]
-    assert limp._scheduling.available(2.0, test_schedule) == 3.6
+    assert limp._scheduling.available(2.0, 0.0, test_schedule) == 3.6
 
 
 def test_available_idle_slot_sufficient():
     test_schedule = [(None, 0.0, 1.2), (None, 3.3, 3.9)]
-    assert limp._scheduling.available(2.0, test_schedule) == 1.2
+    assert limp._scheduling.available(2.0, 0.0, test_schedule) == 1.2
+
+
+def test_available_idle_slot_too_early():
+    test_schedule = [(None, 0.0, 1.2), (None, 3.3, 3.9)]
+    assert limp._scheduling.available(2.0, 2.5, test_schedule) == 3.9
 
 
 def test_add_slot_to_empty_schedule():

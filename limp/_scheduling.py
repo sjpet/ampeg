@@ -201,13 +201,13 @@ def list_communication_costs(args):
     communication_costs = {}
 
     if isinstance(args, Dependency):
-        return args.communication_cost
+        return [(args.task_id, args.communication_cost)]
     elif isinstance(args, dict):
         iterable_args = args.values()
     elif is_iterable(args):
         iterable_args = args
     else:
-        return 0
+        return []
 
     for val in iterable_args:
         if isinstance(val, dict) or is_iterable(val):
@@ -432,14 +432,15 @@ def idle_slots(schedule):
     """
 
     idle_schedule = []
-    last = 0
+    last = 0.0
 
     for slot in schedule:
         _, start, finish = slot
         length = start - last
-        if length > 0:
+        if length > 0.0:
             idle_schedule.append((last, start))
-        elif length < 0:
+        elif length < 0.0:
+            # TODO: investigate issue that can cause unsorted
             raise ValueError("Schedule must be sorted")
         last = finish
 
@@ -482,7 +483,7 @@ def add_slot(task, start, finish, schedule):
     return schedule_
 
 
-def available(min_length, schedule):
+def available(min_length, earliest_time, schedule):
     """Find the earliest available time slot of some minimum length in a
     single processor schedule.
 
@@ -490,6 +491,8 @@ def available(min_length, schedule):
     ----------
     min_length : float
         The required length
+    earliest_time : float
+        The earliest starting time allowed
     schedule : [(Hashable, float, float)]
         Single processor task schedule represented as a list of
         (task, start, finish)-tuples
@@ -502,8 +505,9 @@ def available(min_length, schedule):
 
     for time_slot in idle_slots(schedule):
         start_time, end_time = time_slot
-        if end_time - start_time >= min_length:
-            return start_time
+        start_time_ = max(start_time, earliest_time)
+        if end_time - start_time_ >= min_length:
+            return start_time_
 
     raise ValueError("No available time slot found.")
 
@@ -565,22 +569,23 @@ def est(task,
         Earliest start time
     """
 
-    est_candidates = []
+    dependency_times = [0.0]
 
     for this_task in dependencies:
         (finish_time, this_processor) = actual_finish_time(this_task, schedule)
 
         if this_processor == processor:
-            est_candidates.append(finish_time)
+            dependency_times.append(finish_time)
         else:
             communication_cost = [c for k, c in communication_costs[task] if
                                   k == this_task][0]
-            est_candidates.append(finish_time + communication_cost)
+            dependency_times.append(finish_time + communication_cost)
 
-    est_candidates.append(available(computation_costs[task],
-                                    schedule[processor]))
+    earliest_start = max(dependency_times)
 
-    return max(est_candidates)
+    return available(computation_costs[task],
+                     earliest_start,
+                     schedule[processor])
 
 
 # ## Preprocessing functions

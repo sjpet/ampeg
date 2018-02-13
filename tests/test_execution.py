@@ -108,6 +108,10 @@ def test_expand_args_nested_dict():
     assert limp._execution.expand_args(args, results) == expanded_args
 
 
+def test_expand_args_list_of_tuples():
+    results = []
+
+
 def test_expand_args_dict_no_dependencies():
     results = [({'a': 6},), (None,), (None,), (8,)]
     args = {'x': 4, 'y': 2}
