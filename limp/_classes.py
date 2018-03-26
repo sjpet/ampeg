@@ -91,7 +91,10 @@ class Dependency(namedtuple("Dependency",
                                               communication_cost)
 
     def __eq__(self, other):
-        return (self[0], self[1]) == (other[0], other[1])
+        if not isinstance(other, Dependency):
+            return False
+        else:
+            return (self[0], self[1]) == (other[0], other[1])
 
 
 class Communication(namedtuple("Communication", ("sender", "recipients"))):
