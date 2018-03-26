@@ -281,17 +281,14 @@ def execute_task_lists(task_lists,
 
     # Set up pipes
     pipes = [[None for _ in range(n_processes)] for _ in range(n_processes)]
-    for source in range(n_processes):
-        for sink in range(source + 1, n_processes):
-            x, y = mp.Pipe()
-            pipes[source][sink] = x
-            pipes[sink][source] = y
+    for k in range(1, n_processes):
+        pipes[k - 1] = mp.Pipe()
 
     # Start execution of other task lists
     p = [None for _ in range(n_processes)]
     for k in range(1, n_processes):
         p[k] = mp.Process(target=execute_task_list,
-                          args=(task_lists[k], pipes[k][0], costs))
+                          args=(task_lists[k], pipes[k - 1][1], costs))
         p[k].start()
 
     # Execute own task list
@@ -299,12 +296,12 @@ def execute_task_lists(task_lists,
 
     # Fetch all results and join child processes
     for k in range(1, n_processes):
-        if pipes[0][k].poll(timeout) is False:
+        if pipes[k - 1][0].poll(timeout) is False:
             timeout_error = TimeoutError.default(k)
             results.append([(Err(timeout_error),) for _ in task_lists[k]])
         else:
-            results.append(pipes[0][k].recv())
-        pipes[0][k].close()
+            results.append(pipes[k - 1][0].recv())
+        pipes[k - 1][0].close()
         p[k].join()
 
     results_ = collect_results(results, task_ids)

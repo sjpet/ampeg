@@ -48,6 +48,61 @@ def recursive_map(f, x):
         return f(x)
 
 
+def list_dependencies(args):
+    """List dependencies in arguments.
+
+    Parameters
+    ----------
+    args : Any
+        A single argument, an iterable of arguments or a dict of keyword
+        arguments
+
+    Returns
+    -------
+    List[Hashable]
+        A list of dependencies
+    """
+
+    dependencies = []
+
+    if isinstance(args, Dependency):
+        return[args.task_id]
+    elif isinstance(args, dict):
+        iterable_args = args.values()
+    elif is_iterable(args):
+        iterable_args = args
+    else:
+        return []
+
+    for val in iterable_args:
+        if isinstance(val, dict) or is_iterable(val):
+            dependencies.extend(list_dependencies(val))
+        elif isinstance(val, Dependency):
+            dependencies.append(val.task_id)
+
+    return list(set(dependencies))
+
+
+def successor_graph(graph):
+    """Generate a graph showing the successor tasks for each task.
+
+    Parameters
+    ----------
+    graph : Dict[Hashable, (Callable, Any, Number)]
+        A directed acyclic graph representing the computations where each
+        vertex represents a computational task
+
+    Returns
+    -------
+    Dict[Hashable, List[Hashable]]
+        A simplified graph including showing only successor tasks for each task
+    """
+
+    return {key: [key_ for (key_, val_) in graph.items()
+                  if key in list_dependencies(val_[1])]
+            for (key, val) in graph.items()}
+
+
 def reverse_graph(graph):
     """Reverse a directed graph.
 
@@ -67,6 +122,62 @@ def reverse_graph(graph):
             graph_[vertex_].append(vertex)
 
     return graph_
+
+
+def to_dot(graph, fill_color="lightblue"):
+    """Generate a description of a graph in graphviz's DOT language.
+
+    Parameters
+    ----------
+    graph : Dict[Hashable, (Callable, Any, Number)]
+        A directed acyclic graph representing the computations where each
+        vertex represents a computational task. The graph is represented by a
+        dict with task IDs as keys and tuples of (function, arguments,
+        computational cost) as values. Edges are implied by ``Dependency``
+        instances among arguments.
+    fill_color : Optional[str]
+        Node fill color, default is 'lightblue'.
+
+    Returns
+    -------
+    str
+    """
+
+    dot_template = """digraph G {{
+    {{
+        node [style=filled]
+        {}
+    }}
+    {}
+}}"""
+
+    sg = successor_graph(graph)
+    preamble = "\n        ".join(map(
+        lambda x: dot_node_string(x) + " [fillcolor={}]".format(fill_color),
+        sg.iterkeys()))
+    body = "\n    ".join("{} -> {};".format(dot_node_string(v),
+                                            ", ".join(map(dot_node_string,
+                                                          ws)))
+                         for v, ws in sg.iteritems() if len(ws) > 0)
+
+    return dot_template.format(preamble, body)
+
+
+def dot_node_string(task_id):
+    """Format any task ID as a quoted string.
+
+    Parameters
+    ----------
+    task_id : Hashable
+
+    Returns
+    -------
+    str
+    """
+    if isinstance(task_id, tuple):
+        return "\"" + ", ".join(map(str, task_id)) + "\""
+    else:
+        return "\"" + str(task_id) + "\""
 
 
 def equivalent_args(args_0, args_1):

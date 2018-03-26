@@ -10,6 +10,7 @@ Functions
 .. autofunction:: limp.remove_duplicates
 .. autofunction:: limp.prefix
 .. autofunction:: limp.execute_task_lists
+.. autofunction:: limp.to_dot
 
 Classes
 -------

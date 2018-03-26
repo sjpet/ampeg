@@ -7,9 +7,9 @@
 import multiprocessing as mp
 
 from ._classes import Dependency, Communication
-from ._exceptions import TimeoutError
 from ._helpers import (inf,
                        is_iterable,
+                       successor_graph,
                        reverse_graph,
                        equivalent_args,
                        demux,
@@ -108,61 +108,6 @@ def relabel_dependencies(args, labels):
         return x
 
     return recursive_map(f, args)
-
-
-def list_dependencies(args):
-    """List dependencies in arguments.
-
-    Parameters
-    ----------
-    args : Any
-        A single argument, an iterable of arguments or a dict of keyword
-        arguments
-
-    Returns
-    -------
-    List[Hashable]
-        A list of dependencies
-    """
-
-    dependencies = []
-
-    if isinstance(args, Dependency):
-        return[args.task_id]
-    elif isinstance(args, dict):
-        iterable_args = args.values()
-    elif is_iterable(args):
-        iterable_args = args
-    else:
-        return []
-
-    for val in iterable_args:
-        if isinstance(val, dict) or is_iterable(val):
-            dependencies.extend(list_dependencies(val))
-        elif isinstance(val, Dependency):
-            dependencies.append(val.task_id)
-
-    return list(set(dependencies))
-
-
-def successor_graph(graph):
-    """Generate a graph showing the successor tasks for each task.
-
-    Parameters
-    ----------
-    graph : Dict[Hashable, (Callable, Any, Number)]
-        A directed acyclic graph representing the computations where each
-        vertex represents a computational task
-
-    Returns
-    -------
-    Dict[Hashable, List[Hashable]]
-        A simplified graph including showing only successor tasks for each task
-    """
-
-    return {key: [key_ for (key_, val_) in graph.items()
-                  if key in list_dependencies(val_[1])]
-            for (key, val) in graph.items()}
 
 
 def predecessor_graph(graph):
@@ -274,14 +219,15 @@ def generate_task_lists(graph, schedule, timeout):
 
     num_processes = len(schedule)
 
-    pipes = [[None for _ in range(num_processes)]
-             for _ in range(num_processes)]
+    queues = [[None for _ in range(num_processes)]
+              for _ in range(num_processes)]
     for source in range(num_processes):
         for sink in range(num_processes):
             if source < sink:
-                x, y = mp.Pipe()
-                pipes[source][sink] = x
-                pipes[sink][source] = y
+                x = mp.Queue()
+                y = mp.Queue()
+                queues[source][sink] = x
+                queues[sink][source] = y
 
     task_process = {slot[0]: process
                     for process in range(len(schedule))
@@ -314,7 +260,7 @@ def generate_task_lists(graph, schedule, timeout):
             if finish_ < start:
                 task_indices[process][task_] = len(task_lists[process])
                 task_lists[process].append((receive,
-                                            {"pipe": pipes[process][process_],
+                                            {"queue": queues[process_][process],
                                              "timeout": timeout}))
                 task_ids[process].append(Communication(task_, own_tasks))
                 removals.append(k)
@@ -334,9 +280,10 @@ def generate_task_lists(graph, schedule, timeout):
 
         # Add any required send tasks
         for (p, ts) in successor_processes[this_task]:
-            task_lists[process].append((send, {"result": Dependency(task_index,
+            task_lists[process].append((send, {"queue": queues[process][p],
+                                               "result": Dependency(task_index,
                                                                     None),
-                                               "pipe": pipes[process][p]}))
+                                               "timeout": timeout}))
             task_ids[process].append(Communication(this_task, ts))
             receive_queue[p].append((this_task, process, finish, ts))
 
@@ -736,36 +683,39 @@ def remove_duplicates(graph):
 
 # ## Glue functions
 
-def send(result, pipe):
+def send(queue, result, timeout=60):
     """Send a result from one process to another.
 
     Parameters
     ----------
+    queue : multiprocessing.Queue
     result : Any
-    pipe : multiprocessing.Pipe
+    timeout : Optional[int]
+        Maximum time allowed in seconds, default is 60
     """
 
-    pipe.send(result)
+    queue.put(result, True, timeout)
     return None
 
 
-def receive(pipe, timeout=60):
+def receive(queue, timeout=60):
     """Receive a result from another process.
 
     Parameters
     ----------
-    pipe : multiprocessing.Pipe
+    queue : multiprocessing.Queue
     timeout : Optional[int]
         Maximum time allowed in seconds, default is 60
 
     Returns
     -------
+    Hashable
+        Task id
     Any
+        Results
     """
 
-    if pipe.poll(timeout) is False:
-        raise TimeoutError.default(None)
-    return pipe.recv()
+    return queue.get(True, timeout)
 
 
 # ## Scheduling heuristics
