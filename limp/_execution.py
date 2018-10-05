@@ -12,6 +12,7 @@ from time import time
 from ._classes import Dependency, Communication, Err
 from ._exceptions import DependencyError, TimeoutError
 from ._helpers import is_iterable, recursive_map
+from ._scheduling import send
 
 
 def expand_args(args, results):
@@ -34,22 +35,22 @@ def expand_args(args, results):
 
     def f(x):
         if isinstance(x, Dependency):
-            if x[1] is None:
+            if isinstance(results[x.task_id][0], Err):
+                raise DependencyError.default(results[x.task_id][0])
+            elif x[1] is None:
                 r = results[x.task_id][0]
             elif is_iterable(x.key):
                 r = expand_recursively(results[x.task_id][0], x.key)
             else:
-                try:
-                    r = results[x.task_id][0][x.key]
-                except Exception as e:
-                    raise e
+                r = results[x.task_id][0][x.key]
 
             if isinstance(r, Err):
                 raise DependencyError.default(r)
-            else:
-                return r
 
-        return x
+            return r
+
+        else:
+            return x
 
     return recursive_map(f, args)
 
@@ -199,7 +200,7 @@ def costs_dict(results, task_ids):
     return costs_
 
 
-def execute_task_list(task_list, pipe=None, costs=False):
+def execute_task_list(task_list, pipe=None, costs=False, identity=0):
     """Sequentially execute a task list, handling any inter-task dependencies.
 
     Parameters
@@ -219,18 +220,35 @@ def execute_task_list(task_list, pipe=None, costs=False):
 
     results = []
     for k, (task, args) in enumerate(task_list):
+        this_result = None
         this_start = time()
+
         try:
             expanded_args = expand_args(args, results)
-            if isinstance(expanded_args, dict):
-                this_result = task(**expanded_args)
-            elif is_iterable(expanded_args):
-                this_result = task(*expanded_args)
-            else:
-                this_result = task(expanded_args)
         except Exception as e:
             _, _, tb = sys.exc_info()
-            this_result = Err(e, traceback.extract_tb(tb))
+            err = Err(e, traceback.extract_tb(tb))
+            if task == send and isinstance(args, dict):
+                expanded_args = {key: val for key, val in args.iteritems()}
+                expanded_args["result"] = err
+            elif task == send:
+                expanded_args = [args[0], err] + args[2:]
+            else:
+                expanded_args = None
+                this_result = err
+
+        if this_result is None:
+            try:
+                if isinstance(expanded_args, dict):
+                    this_result = task(**expanded_args)
+                elif is_iterable(expanded_args):
+                    this_result = task(*expanded_args)
+                else:
+                    this_result = task(expanded_args)
+            except Exception as e:
+                _, _, tb = sys.exc_info()
+                this_result = Err(e, traceback.extract_tb(tb))
+
         this_end = time()
 
         results.append((this_result,) if costs is False
@@ -279,16 +297,13 @@ def execute_task_lists(task_lists,
 
     n_processes = len(task_lists)
 
-    # Set up pipes
-    pipes = [[None for _ in range(n_processes)] for _ in range(n_processes)]
-    for k in range(1, n_processes):
-        pipes[k - 1] = mp.Pipe()
-
     # Start execution of other task lists
+    pipes = [None for _ in range(n_processes)]
     p = [None for _ in range(n_processes)]
     for k in range(1, n_processes):
+        pipes[k] = mp.Pipe()
         p[k] = mp.Process(target=execute_task_list,
-                          args=(task_lists[k], pipes[k - 1][1], costs))
+                          args=(task_lists[k], pipes[k][1], costs, k))
         p[k].start()
 
     # Execute own task list
@@ -296,13 +311,17 @@ def execute_task_lists(task_lists,
 
     # Fetch all results and join child processes
     for k in range(1, n_processes):
-        if pipes[k - 1][0].poll(timeout) is False:
+        alive_or_finished = p[k].is_alive() or pipes[k][0].poll() is True
+        if not alive_or_finished or pipes[k][0].poll(timeout) is False:
             timeout_error = TimeoutError.default(k)
             results.append([(Err(timeout_error),) for _ in task_lists[k]])
         else:
-            results.append(pipes[k - 1][0].recv())
-        pipes[k - 1][0].close()
-        p[k].join()
+            results.append(pipes[k][0].recv())
+        pipes[k][0].close()
+
+    for k in range(1, n_processes):
+        if p[k].is_alive():
+            p[k].join(1)
 
     results_ = collect_results(results, task_ids)
 

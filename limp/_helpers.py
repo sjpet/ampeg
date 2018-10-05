@@ -4,7 +4,7 @@
 @author: Stefan Peterson
 """
 
-from ._classes import Dependency
+from ._classes import (Communication, Dependency)
 
 try:
     from math import inf
@@ -161,6 +161,107 @@ def to_dot(graph, fill_color="lightblue"):
                          for v, ws in sg.iteritems() if len(ws) > 0)
 
     return dot_template.format(preamble, body)
+
+
+def process_graph(task_ids):
+    """Generate a process graph description.
+
+    Parameters
+    ----------
+    task_ids
+
+    Returns
+    -------
+    str
+    """
+    
+    process_graph_template = """digraph G {{
+   
+    {subprocesses}
+    {ipc_edges};
+    {ranks}
+
+}}""" 
+
+
+    renamed_task_ids = rename_communications(task_ids)
+
+    subprocesses = "\n".join(subprocess_graph(k, p)
+                             for k, p in enumerate(renamed_task_ids))
+    ipc_edge_list = []
+    ranks_list = []
+    for k, process_task_ids in enumerate(renamed_task_ids):
+        for task_id in process_task_ids:
+            node_string = dot_node_string(task_id)
+            if node_string.startswith('"Receive '):
+                ipc_edge_list.append('"Send ' + 
+                                     node_string[9:] +
+                                     ' -> ' +
+                                     node_string)
+                ranks_list.append('{ rank=same; ' +
+                                  node_string +
+                                  ', ' +
+                                  '"Send ' +
+                                  node_string[9:] +
+                                  ' }')
+    ipc_edges = ";\n    ".join(ipc_edge_list)
+    ranks = "\n    ".join(ranks_list)
+    ranks = ""
+
+    return process_graph_template.format(subprocesses=subprocesses,
+                                         ipc_edges=ipc_edges,
+                                         ranks=ranks)
+
+
+def rename_communications(task_ids):
+    """
+    """
+    renamed_task_ids = []
+    for k, process_task_ids in enumerate(task_ids):
+        renamed_process_task_ids = []
+        for task_id in process_task_ids:
+            if isinstance(task_id, Communication):
+                sending_process = task_process(task_id.sender, task_ids)
+                receiving_process = task_process(task_id.recipients[0],
+                                                 task_ids)
+                if task_id[0] in renamed_process_task_ids:
+                    renamed_process_task_ids.append(
+                        "Send " + str(task_id[0]) + 
+                        " ({}>{})".format(sending_process, receiving_process))
+                else:
+                    renamed_process_task_ids.append(
+                        "Receive " + str(task_id[0]) + 
+                        " ({}>{})".format(sending_process, receiving_process))
+            else:
+                renamed_process_task_ids.append(task_id)
+        renamed_task_ids.append(renamed_process_task_ids)
+
+    return renamed_task_ids
+
+
+def task_process(task_id, task_ids):
+    for k, process_task_ids in enumerate(task_ids):
+        if task_id in process_task_ids:
+            return k
+    raise ValueError("Task not found in list")
+
+
+def subprocess_graph(k, task_ids):
+    """
+    """
+    subprocess_graph_template = """    subgraph cluster_{k} {{
+        style=filled;
+        color=lightgrey;
+        node [style="rounded, filled", color=white, shape=box];
+        {edges};
+        label = "Process #{k}";
+    }}"""
+
+    node_strings = [dot_node_string(task_id) for task_id in task_ids]
+    edges = " ->\n        ".join(node_strings)
+    nodes = ",\n          ".join(node_strings)
+
+    return subprocess_graph_template.format(k=k, nodes=nodes, edges=edges)
 
 
 def dot_node_string(task_id):

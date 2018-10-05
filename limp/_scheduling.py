@@ -221,13 +221,12 @@ def generate_task_lists(graph, schedule, timeout):
 
     queues = [[None for _ in range(num_processes)]
               for _ in range(num_processes)]
-    for source in range(num_processes):
-        for sink in range(num_processes):
-            if source < sink:
-                x = mp.Queue()
-                y = mp.Queue()
-                queues[source][sink] = x
-                queues[sink][source] = y
+    for sink in range(num_processes):
+        for source in range(sink):
+            x = mp.Queue()
+            y = mp.Queue()
+            queues[source][sink] = x
+            queues[sink][source] = y
 
     task_process = {slot[0]: process
                     for process in range(len(schedule))
