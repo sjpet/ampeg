@@ -682,7 +682,7 @@ def remove_duplicates(graph):
 
 # ## Glue functions
 
-def send(queue, result, timeout=60):
+def send(queue, result, timeout=None):
     """Send a result from one process to another.
 
     Parameters
@@ -690,21 +690,21 @@ def send(queue, result, timeout=60):
     queue : multiprocessing.Queue
     result : Any
     timeout : Optional[int]
-        Maximum time allowed in seconds, default is 60
+        Optional timeout in seconds, default is None
     """
 
     queue.put(result, True, timeout)
     return None
 
 
-def receive(queue, timeout=60):
+def receive(queue, timeout=None):
     """Receive a result from another process.
 
     Parameters
     ----------
     queue : multiprocessing.Queue
     timeout : Optional[int]
-        Maximum time allowed in seconds, default is 60
+        Optional timeout in seconds, default is None
 
     Returns
     -------
@@ -810,7 +810,7 @@ def upward_rank(graph):
     return ranks
 
 
-def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=60):
+def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=None):
     """Generate a list of ``n_processes`` task lists from a ``graph``.
 
     Parameters
@@ -827,7 +827,7 @@ def earliest_finish_time(graph, n_processes, output_tasks=None, timeout=60):
         A list of output tasks. Default is None, which considers all tasks to
         be output tasks.
     timeout : Optional[Number]
-        Timeout in seconds for receive tasks, default is 60.
+        Optional timeout in seconds, default is None
 
     Returns
     -------

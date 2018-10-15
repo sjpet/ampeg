@@ -265,7 +265,7 @@ def execute_task_lists(task_lists,
                        task_ids=None,
                        inflate=False,
                        costs=False,
-                       timeout=60):
+                       timeout=None):
     """Execute a number of task list over equally many processes.
 
     Parameters
@@ -281,8 +281,8 @@ def execute_task_lists(task_lists,
     costs : Optional[bool]
         Include approximate costs if True. Default is False.
     timeout : Optional[Number]
-        Timeout in seconds for collecting results from spawned processes,
-        default is 60.
+        Optional timeout in seconds for collecting results from spawned
+        processes, default is None.
 
     Returns
     -------
@@ -311,12 +311,11 @@ def execute_task_lists(task_lists,
 
     # Fetch all results and join child processes
     for k in range(1, n_processes):
-        alive_or_finished = p[k].is_alive() or pipes[k][0].poll() is True
-        if not alive_or_finished or pipes[k][0].poll(timeout) is False:
+        if pipes[k][0].poll() is True or timeout is None:
+            results.append(pipes[k][0].recv())
+        elif not p[k].is_alive() or pipes[k][0].poll(timeout) is False:
             timeout_error = TimeoutError.default(k)
             results.append([(Err(timeout_error),) for _ in task_lists[k]])
-        else:
-            results.append(pipes[k][0].recv())
         pipes[k][0].close()
 
     for k in range(1, n_processes):

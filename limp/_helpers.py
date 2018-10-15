@@ -183,7 +183,6 @@ def process_graph(task_ids):
 
 }}""" 
 
-
     renamed_task_ids = rename_communications(task_ids)
 
     subprocesses = "\n".join(subprocess_graph(k, p)

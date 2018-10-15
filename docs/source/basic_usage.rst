@@ -86,15 +86,14 @@ keyword argument ``output_tasks: List[Hashable]``:
 Inter-process Communication
 ---------------------------
 
-:mod:`limp` uses pipes to send results between processes. To prevent processes
-from getting stuck, there is a time limit when attempting to receive data. The
-default timeout is 60 seconds, but this can be changed by passing the optional
+:mod:`limp` uses queues to send results between processes. By default, a
+process will wait indefinitely when instructed to receive data from another
+process. If desired, a time limit may be imposed by passing the optional 
 keyword argument ``timeout: Number`` to :meth:`limp.earliest_finish_time`. If
-no data has been received within the allowed time, a
-:exc:`limp.TimeoutError` is raised. Similarly, :meth:`limp.execute_task_lists`
-has a default time limit of 60 seconds to collect the results from all child
-processes, and takes the optional keyword argument ``timeout: Number`` to
-change this limit.
+no data has been received within the allowed time, a :exc:`limp.TimeoutError`
+is raised. Similarly, :meth:`limp.execute_task_lists` has a default time limit
+of 60 seconds to collect the results from all child processes, and takes the
+optional keyword argument ``timeout: Number`` to change this limit.
 
 Cost Feedback
 -------------
