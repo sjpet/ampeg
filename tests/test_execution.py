@@ -7,6 +7,7 @@ Author: Stefan Peterson
 import sys
 
 import pytest
+import six
 
 import limp
 
@@ -285,7 +286,7 @@ def test_inflate_do_not_recurse():
 
 def test_execution():
     task_lists, task_ids = limp.earliest_finish_time(test_graph_1, 4)
-    results = limp.execute_task_lists(task_lists, task_ids)
+    results = limp.execute_task_lists(task_lists, task_ids, 4)
     assert results == results_1
 
 
@@ -295,7 +296,7 @@ def test_execution_filtered():
                                                      output_tasks=["stats_0",
                                                                    "stats_1",
                                                                    "final"])
-    results = limp.execute_task_lists(task_lists, task_ids)
+    results = limp.execute_task_lists(task_lists, task_ids, 4)
     assert results == results_1_filtered
 
 
@@ -383,9 +384,9 @@ def test_execution_multiplexing_costs_inflate():
     costs = results.pop('costs')
     assert results == results_1_nested_
     assert set(costs.keys()) == set(costs_1_nested_.keys())
-    for key, val in costs.iteritems():
+    for key, val in six.iteritems(costs):
         if isinstance(val, dict):
-            for key_, val_ in val.iteritems():
+            for key_, val_ in six.iteritems(val):
                 assert costs[key][key_][0] >= 0.0
                 assert set(costs[key][key_][1].keys()) == set(
                     costs_1_nested_[key][key_][1].keys())

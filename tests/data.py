@@ -260,8 +260,8 @@ results_2 = {0: [],
              5: limp.Err(limp.DependencyError.default(zero_div_error)),
              6: 0}
 
-timeout_error = limp.Err(limp.TimeoutError.default(1))
-recv_timeout_error = limp.Err(limp.TimeoutError.default(None))
+timeout_error = limp.Err(limp.LimpTimeoutError.default(1))
+recv_timeout_error = limp.Err(limp.LimpTimeoutError.default(None))
 dep_timeout_error = limp.Err(limp.DependencyError.default(recv_timeout_error))
 
 results_2_timeout = {0: [],

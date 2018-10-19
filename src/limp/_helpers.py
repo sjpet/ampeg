@@ -4,6 +4,8 @@
 @author: Stefan Peterson
 """
 
+import six
+
 from ._classes import (Communication, Dependency)
 
 try:
@@ -41,7 +43,7 @@ def recursive_map(f, x):
     """
 
     if isinstance(x, dict):
-        return {key: recursive_map(f, val) for key, val in x.iteritems()}
+        return {key: recursive_map(f, val) for key, val in six.iteritems(x)}
     elif is_iterable(x):
         return type(x)(map(lambda y: recursive_map(f, y), x))
     else:
@@ -154,11 +156,11 @@ def to_dot(graph, fill_color="lightblue"):
     sg = successor_graph(graph)
     preamble = "\n        ".join(map(
         lambda x: dot_node_string(x) + " [fillcolor={}]".format(fill_color),
-        sg.iterkeys()))
+        six.iterkeys(sg)))
     body = "\n    ".join("{} -> {};".format(dot_node_string(v),
                                             ", ".join(map(dot_node_string,
                                                           ws)))
-                         for v, ws in sg.iteritems() if len(ws) > 0)
+                         for v, ws in six.iteritems(sg) if len(ws) > 0)
 
     return dot_template.format(preamble, body)
 

@@ -45,9 +45,9 @@ A simple usage example computing :math:`(3^2 + 4^2) - (3^2 * 10/2)`:
 """
 
 from ._classes import Dependency, Communication, Err
-from ._exceptions import DependencyError, TimeoutError
+from ._exceptions import DependencyError, LimpTimeoutError
 from ._scheduling import (earliest_finish_time, remove_duplicates, prefix)
 from ._execution import execute_task_lists
 from ._helpers import to_dot
 
-__version__ = "0.9"
+__version__ = "0.10"

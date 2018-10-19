@@ -26,7 +26,7 @@ class DependencyError(Exception):
         return DependencyError(message)
 
 
-class TimeoutError(Exception):
+class LimpTimeoutError(Exception):
     """A task timed out."""
 
     def __init__(self, message):
@@ -39,4 +39,4 @@ class TimeoutError(Exception):
         else:
             message = "Timeout when collecting results from process {k}"\
                 .format(k=process_index)
-        return TimeoutError(message)
+        return LimpTimeoutError(message)

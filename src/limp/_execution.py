@@ -9,8 +9,11 @@ import traceback
 import multiprocessing as mp
 from time import time
 
+import six
+from six.moves.queue import Empty
+
 from ._classes import Dependency, Communication, Err
-from ._exceptions import DependencyError, TimeoutError
+from ._exceptions import DependencyError, LimpTimeoutError
 from ._helpers import is_iterable, recursive_map
 from ._scheduling import send
 
@@ -95,7 +98,7 @@ def inflate_results(results):
         A nested dict of results
     """
     inflated_results = {}
-    for key, val in results.iteritems():
+    for key, val in six.iteritems(results):
         if isinstance(key, tuple):
             current_level = inflated_results
             for key_ in key[:-1]:
@@ -200,7 +203,7 @@ def costs_dict(results, task_ids):
     return costs_
 
 
-def execute_task_list(task_list, pipe=None, costs=False, identity=0):
+def execute_task_list(task_list, pipe=None, costs=False):
     """Sequentially execute a task list, handling any inter-task dependencies.
 
     Parameters
@@ -229,7 +232,7 @@ def execute_task_list(task_list, pipe=None, costs=False, identity=0):
             _, _, tb = sys.exc_info()
             err = Err(e, traceback.extract_tb(tb))
             if task == send and isinstance(args, dict):
-                expanded_args = {key: val for key, val in args.iteritems()}
+                expanded_args = {key: val for key, val in six.iteritems(args)}
                 expanded_args["result"] = err
             elif task == send:
                 expanded_args = [args[0], err] + args[2:]
@@ -247,6 +250,8 @@ def execute_task_list(task_list, pipe=None, costs=False, identity=0):
                     this_result = task(expanded_args)
             except Exception as e:
                 _, _, tb = sys.exc_info()
+                if isinstance(e, Empty):
+                    e = LimpTimeoutError.default(None)
                 this_result = Err(e, traceback.extract_tb(tb))
 
         this_end = time()
@@ -303,18 +308,20 @@ def execute_task_lists(task_lists,
     for k in range(1, n_processes):
         pipes[k] = mp.Pipe()
         p[k] = mp.Process(target=execute_task_list,
-                          args=(task_lists[k], pipes[k][1], costs, k))
+                          args=(task_lists[k], pipes[k][1], costs))
         p[k].start()
 
     # Execute own task list
     results = [execute_task_list(task_lists[0], costs=costs)]
 
     # Fetch all results and join child processes
+    with open("/home/stefan/dump", "a") as f:
+        f.write("quack")
     for k in range(1, n_processes):
         if pipes[k][0].poll() is True or timeout is None:
             results.append(pipes[k][0].recv())
         elif not p[k].is_alive() or pipes[k][0].poll(timeout) is False:
-            timeout_error = TimeoutError.default(k)
+            timeout_error = LimpTimeoutError.default(k)
             results.append([(Err(timeout_error),) for _ in task_lists[k]])
         pipes[k][0].close()
 

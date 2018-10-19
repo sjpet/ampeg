@@ -6,6 +6,8 @@
 
 import multiprocessing as mp
 
+import six
+
 from ._classes import Dependency, Communication
 from ._helpers import (inf,
                        is_iterable,
@@ -555,7 +557,7 @@ def prefix(graph, prefix_key):
         A new graph with the task IDs prefixed.
     """
     prefixed_graph = {}
-    for key, val in graph.iteritems():
+    for key, val in six.iteritems(graph):
         prefixed_graph[prefix_single(key, prefix_key)] = \
             prefix_dependencies(val, prefix_key)
 
