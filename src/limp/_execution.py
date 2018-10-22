@@ -315,8 +315,6 @@ def execute_task_lists(task_lists,
     results = [execute_task_list(task_lists[0], costs=costs)]
 
     # Fetch all results and join child processes
-    with open("/home/stefan/dump", "a") as f:
-        f.write("quack")
     for k in range(1, n_processes):
         if pipes[k][0].poll() is True or timeout is None:
             results.append(pipes[k][0].recv())
