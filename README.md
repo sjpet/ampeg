@@ -35,6 +35,7 @@ the args or kwargs.
 
 A simple usage example computing (3^2 + 4^2) - (3^2 * 10/2):
 
+```
 >>> import ampeg as ag
 >>> n_processes = 3
 >>> my_graph = {0: (lambda x: x**2, 3, 10.8),
@@ -49,6 +50,7 @@ A simple usage example computing (3^2 + 4^2) - (3^2 * 10/2):
 >>> task_lists, task_ids = ag.earliest_finish_time(my_graph, n_processes)
 >>> ag.execute_task_lists(task_lists, task_ids)
 {0: 9, 1: 16, 2: 5, 3: 25, 4: 45, 5: -20}
+```
 
 The Dependency class
 --------------------
@@ -57,7 +59,7 @@ A dependency is a triple of (task ID or index, key (if any) and communication
 cost). The key may be a single key, index or slice, or it may be an iterable of
 such values to be applied in sequence. For example, the key ``('values', 2)``
 extracts the value 5 from the dict ``{'values': [1, 3, 5]}``. Dependency
-instances are created by ampeg.Dependency(task, key, cost) where cost is
+instances are created by ``ampeg.Dependency(task, key, cost)`` where cost is
 optional and defaults to 0.
 
 Exceptions
@@ -67,3 +69,8 @@ Ampeg catches exceptions raised by individual tasks, returning them as results
 encapsulated in the ``Err`` class. When an ``Err`` instance is found among the
 dependencies for a task, the result for this task will be an ``Err`` instance
 encapsulating a ``DependencyError``.
+
+Windows
+-------
+Note that under Windows, the functions and their arguments must all be 
+picklable.
