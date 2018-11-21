@@ -27,7 +27,7 @@ setup(name='ampeg',
           'Intended Audience :: Science/Research',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: GNU General Public License (GPL)',
-          'Programming Language :: Python :: 2.7'
+          'Programming Language :: Python :: 2.7',
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.4',
           'Programming Language :: Python :: 3.5',
