@@ -1,6 +1,5 @@
-====
 Ampeg
-====
+=====
 
 Ampeg is a simple and lightweight package for parallel computation. It provides
 simple functions for scheduling and execution of a set of dependent or
