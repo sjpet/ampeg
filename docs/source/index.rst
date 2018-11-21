@@ -1,5 +1,5 @@
 ==================
-Limp Documentation
+Ampeg Documentation
 ==================
 
 :Version: |version|
@@ -18,4 +18,4 @@ API reference
 .. toctree::
    :maxdepth: 1
 
-   limp
+   ampeg

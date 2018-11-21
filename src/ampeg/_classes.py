@@ -1,5 +1,5 @@
 #  -*- coding: utf-8 -*-
-"""Classes for limp.
+"""Classes for ampeg.
 
 @author: Stefan Peterson
 """
@@ -74,14 +74,14 @@ class Dependency(namedtuple("Dependency",
 
     Examples
     --------
-    >>> import limp
-    >>> limp.Dependency("task_0", None) == \\
-    ...     limp.Dependency("task_0", None, 0)
+    >>> import ampeg as ag
+    >>> ag.Dependency("task_0", None) == \\
+    ...     ag.Dependency("task_0", None, 0)
     True
 
-    >>> _ = limp.Dependency("task_0",
-    ...                     [("first", "second"),
-    ...                      slice(2, 5)])
+    >>> _ = ag.Dependency("task_0",
+    ...                   [("first", "second"),
+    ...                    slice(2, 5)])
     """
 
     def __new__(cls, task_id, key, communication_cost=0):

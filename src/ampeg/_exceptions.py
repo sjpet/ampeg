@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Custom exceptions for limp.
+"""Custom exceptions for ampeg.
 
 @author: Stefan Peterson
 """
@@ -26,7 +26,7 @@ class DependencyError(Exception):
         return DependencyError(message)
 
 
-class LimpTimeoutError(Exception):
+class TaskTimeoutError(Exception):
     """A task timed out."""
 
     def __init__(self, message):
@@ -39,4 +39,4 @@ class LimpTimeoutError(Exception):
         else:
             message = "Timeout when collecting results from process {k}"\
                 .format(k=process_index)
-        return LimpTimeoutError(message)
+        return TaskTimeoutError(message)

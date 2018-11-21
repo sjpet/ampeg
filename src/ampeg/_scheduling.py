@@ -613,7 +613,7 @@ def prefix_single(task_id, prefix_key):
 def remove_duplicates(graph):
     """Remove duplicate tasks from a ``graph``.
 
-    This is done automatically by ``limp.earliest_finish_time``.
+    This is done automatically by ``ampeg.earliest_finish_time``.
 
     Parameters
     ----------

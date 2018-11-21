@@ -1,5 +1,5 @@
 #  -*- coding: utf-8 -*-
-"""Helper functions for limp.
+"""Helper functions for ampeg.
 
 @author: Stefan Peterson
 """

@@ -13,7 +13,7 @@ import six
 from six.moves.queue import Empty
 
 from ._classes import Dependency, Communication, Err
-from ._exceptions import DependencyError, LimpTimeoutError
+from ._exceptions import DependencyError, TaskTimeoutError
 from ._helpers import is_iterable, recursive_map
 from ._scheduling import send
 
@@ -251,7 +251,7 @@ def execute_task_list(task_list, pipe=None, costs=False):
             except Exception as e:
                 _, _, tb = sys.exc_info()
                 if isinstance(e, Empty):
-                    e = LimpTimeoutError.default(None)
+                    e = TaskTimeoutError.default(None)
                 this_result = Err(e, traceback.extract_tb(tb))
 
         this_end = time()
@@ -319,7 +319,7 @@ def execute_task_lists(task_lists,
         if pipes[k][0].poll() is True or timeout is None:
             results.append(pipes[k][0].recv())
         elif not p[k].is_alive() or pipes[k][0].poll(timeout) is False:
-            timeout_error = LimpTimeoutError.default(k)
+            timeout_error = TaskTimeoutError.default(k)
             results.append([(Err(timeout_error),) for _ in task_lists[k]])
         pipes[k][0].close()
 
