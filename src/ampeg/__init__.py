@@ -50,4 +50,5 @@ from ._scheduling import (earliest_finish_time, remove_duplicates, prefix)
 from ._execution import execute_task_lists
 from ._helpers import to_dot
 
+name = "ampeg"
 __version__ = "0.1.0"
