@@ -6,7 +6,7 @@ from os.path import splitext, basename
 with open("README.md") as fh:
     long_description = fh.read()
 
-__version__ = '0.1'
+__version__ = '0.1.1'
 
 setup(name='ampeg',
       version=__version__,

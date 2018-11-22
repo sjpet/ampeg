@@ -13,6 +13,9 @@ class DependencyError(Exception):
     def __init__(self, message):
         self.message = message
 
+    def __str__(self):
+        return self.message
+
     @staticmethod
     def default(err):
         if isinstance(err, Err):
@@ -31,6 +34,9 @@ class TaskTimeoutError(Exception):
 
     def __init__(self, message):
         self.message = message
+
+    def __str__(self):
+        return self.message
 
     @staticmethod
     def default(process_index):
