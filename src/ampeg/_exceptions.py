@@ -23,7 +23,8 @@ class DependencyError(Exception):
                 message = err.message
             else:
                 message = "A dependency raised {t} with the message \"{m}\""\
-                    .format(t=err.err_type.__name__, m=err.message)
+                    .format(t=err.err_type.__name__,
+                            m=err.message_with_traceback)
         else:
             message = "A wild DependencyError appeared!"
         return DependencyError(message)

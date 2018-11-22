@@ -51,4 +51,4 @@ from ._execution import execute_task_lists
 from ._helpers import to_dot
 
 name = "ampeg"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
