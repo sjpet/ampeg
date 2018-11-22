@@ -344,14 +344,22 @@ def test_execution_handle_error_in_parent_process():
     task_lists, task_ids = ampeg.earliest_finish_time(test_graph_2_a, 2)
     results = ampeg.execute_task_lists(task_lists, task_ids)
     for key in results:
-        assert results[key] == results_2[key]
+        if isinstance(results[key], ampeg.Err):
+            assert results[key].err_type == results_2[key].err_type
+            assert results[key].message.startswith(results_2[key].message[:-1])
+        else:
+            assert results[key] == results_2[key]
 
 
 def test_execution_handle_error_in_child_process():
     task_lists, task_ids = ampeg.earliest_finish_time(test_graph_2_b, 2)
     results = ampeg.execute_task_lists(task_lists, task_ids)
     for key in results:
-        assert results[key] == results_2[key]
+        if isinstance(results[key], ampeg.Err):
+            assert results[key].err_type == results_2[key].err_type
+            assert results[key].message.startswith(results_2[key].message[:-1])
+        else:
+            assert results[key] == results_2[key]
 
 
 def test_execution_child_process_killed():
@@ -361,7 +369,12 @@ def test_execution_child_process_killed():
     task_lists[1][1] = (sys.exit, [])
     results = ampeg.execute_task_lists(task_lists, task_ids, timeout=1)
     for key in results:
-        assert results[key] == results_2_timeout[key]
+        if isinstance(results[key], ampeg.Err):
+            assert results[key].err_type == results_2_timeout[key].err_type
+            assert results[key].message.startswith(
+                results_2_timeout[key].message[:-1])
+        else:
+            assert results[key] == results_2_timeout[key]
 
 
 def test_execution_inflate():
