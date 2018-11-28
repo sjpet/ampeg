@@ -30,7 +30,7 @@ def test_dependency_error_default():
     err = ampeg.Err(Exception("An exception"))
     expected_message = "A dependency raised Exception with the message " \
                        "\"An exception\""
-    assert ampeg.DependencyError.default(err).message == expected_message
+    assert str(ampeg.DependencyError.default(err)) == expected_message
 
 
 #  Dependency expansion tests
@@ -346,7 +346,7 @@ def test_execution_handle_error_in_parent_process():
     for key in results:
         if isinstance(results[key], ampeg.Err):
             assert results[key].err_type == results_2[key].err_type
-            assert results[key].message.startswith(results_2[key].message[:-1])
+            assert str(results[key]).startswith(str(results_2[key])[:-1])
         else:
             assert results[key] == results_2[key]
 
@@ -357,7 +357,7 @@ def test_execution_handle_error_in_child_process():
     for key in results:
         if isinstance(results[key], ampeg.Err):
             assert results[key].err_type == results_2[key].err_type
-            assert results[key].message.startswith(results_2[key].message[:-1])
+            assert str(results[key]).startswith(str(results_2[key])[:-1])
         else:
             assert results[key] == results_2[key]
 
@@ -371,8 +371,8 @@ def test_execution_child_process_killed():
     for key in results:
         if isinstance(results[key], ampeg.Err):
             assert results[key].err_type == results_2_timeout[key].err_type
-            assert results[key].message.startswith(
-                results_2_timeout[key].message[:-1])
+            assert str(results[key]).startswith(
+                str(results_2_timeout[key])[:-1])
         else:
             assert results[key] == results_2_timeout[key]
 

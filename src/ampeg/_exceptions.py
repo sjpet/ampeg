@@ -10,34 +10,22 @@ from ._classes import Err
 class DependencyError(Exception):
     """A task dependency raised an Error."""
 
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return self.message
-
     @staticmethod
     def default(err):
         if isinstance(err, Err):
             if err.err_type == DependencyError:
-                message = err.message
+                return DependencyError(*err.args)
             else:
                 message = "A dependency raised {t} with the message \"{m}\""\
                     .format(t=err.err_type.__name__,
                             m=err.message_with_traceback)
+                return DependencyError(message)
         else:
-            message = "A wild DependencyError appeared!"
-        return DependencyError(message)
+            return DependencyError("A wild DependencyError appeared!")
 
 
 class TaskTimeoutError(Exception):
     """A task timed out."""
-
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return self.message
 
     @staticmethod
     def default(process_index):

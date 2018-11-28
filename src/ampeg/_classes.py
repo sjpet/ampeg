@@ -5,6 +5,7 @@
 """
 
 from collections import namedtuple
+from warnings import warn
 
 
 class Err(object):
@@ -24,7 +25,7 @@ class Err(object):
     def __init__(self, err, traceback=None):
         # Deconstruct the exception since Python 2 can't unpickle them
         self.err_type = type(err)
-        self.message = str(err)
+        self.args = err.args
         self._traceback = traceback
 
     def __eq__(self, other):
@@ -32,18 +33,34 @@ class Err(object):
             return False
         else:
             return self.err_type == other.err_type and \
-                   self.message == other.message
+                   self.args == other.args
 
     def __repr__(self):
-        return "Err<{t}(\"{m}\")>".format(t=self.err_type.__name__,
-                                          m=self.message)
+        if self._traceback is not None:
+            return "Err({e}, '{t}')".format(e=self.err_type(*self.args),
+                                            t=self._traceback)
+        else:
+            return "Err({})".format(self.err_type(*self.args))
+
+    def __str__(self):
+        if len(self.args) == 0:
+            return ""
+        elif len(self.args) == 1:
+            return str(self.args[0])
+        else:
+            return str(self.args)
     
+    @property
+    def message(self):
+        warn(DeprecationWarning("Err.message has been deprecated as of 0.1.4"))
+        return str(self)
+
     @property
     def message_with_traceback(self):
         if self._traceback is None:
-            return self.message
+            return str(self)
         else:
-            return self.message + "\n" + self._pretty_traceback()
+            return str(self) + "\n" + self._pretty_traceback()
 
     def _pretty_traceback(self):
         """Format traceback information as a pretty string.
