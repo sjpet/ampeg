@@ -2,11 +2,11 @@
 Basic Usage
 ===========
 
-To install :mod:`ampeg`, simply navigate to the source directory and run
+You can install :mod:`ampeg` using pip:
 
 .. code-block:: bash
 
-   python setup.py install
+   pip install ampeg
 
 Computation Graphs
 ------------------
