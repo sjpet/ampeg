@@ -39,6 +39,15 @@ summing the two values. The corresponding computation graph has three nodes:
 ...                      ag.Dependency("square 2", None, 1)],
 ...                     1)}
 
+Executing Computation Graphs
+----------------------------
+The easiest way to execute a computation graph is with :meth:`ampeg.run`.
+
+>>> ag.run(my_graph, 2)
+{'sum': 73, 'square 1': 9, 'square 2': 64}
+
+Another option is to split the scheduling and execution as described below.
+
 Scheduling Subtasks on Multiple Processes
 -----------------------------------------
 

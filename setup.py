@@ -6,22 +6,23 @@ from os.path import splitext, basename
 with open("README.md") as fh:
     long_description = fh.read()
 
-__version__ = '0.1.4'
+__version__ = '0.2.0'
 
 setup(name='ampeg',
       version=__version__,
       license='GPL-3.0',
       description='A simple and lightweight package for parallel computing',
       long_description=long_description,
+      long_description_content_type='text/markdown',
       author='Stefan Peterson',
-      author_email='stefan.peterson@rubico.com',
+      author_email='stefan.j.peterson@gmail.com',
       url='https://github.com/sjpet/ampeg',
       packages=find_packages('src'),
       package_dir={'': 'src'},
       py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
       include_package_data=True,
       download_url='https://github.com/sjpet/ampeg/tarball/%s' % __version__,
-      keywords='machine learning data mining out-of-memory',
+      keywords='parallellism multiprocessing async concurrent',
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Science/Research',
@@ -33,6 +34,7 @@ setup(name='ampeg',
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Topic :: Utilities'],
       install_requires=['six'],
       extras_require={'dev': ['pytest', 'tox']},

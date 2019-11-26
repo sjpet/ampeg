@@ -87,11 +87,13 @@ class Dependency(namedtuple("Dependency",
                             ("task_id", "key", "communication_cost"))):
     """A triple of (task ID, key, communication cost).
 
-    The key may be a single
-    key, index or slice, or it may be an iterable of such types to be applied
-    in sequence. For example, the key ``('values', 2)`` extracts the value 5
-    from the dict ``{'values': [1, 3, 5]}``. The key may also be ``None``,
-    indicating that the entire return value of the predecessor shall be used.
+    The key may be a single key, index or slice, or it may be an iterable of
+    such types to be applied in sequence. For example, the key ``('values', 2)``
+    extracts the value 5 from the dict ``{'values': [1, 3, 5]}``. The key may
+    also be ``None``, indicating that the entire return value of the predecessor
+    shall be used.
+
+    String keys are tried as item keys first, then as attributes.
 
     Communication cost is optional and defaults to 0.
 

@@ -44,7 +44,11 @@ def test_list_dependencies_nested_dependencies():
 
 
 def test_successor_graph():
-    assert ampeg._helpers.successor_graph(test_graph_1) == successor_graph_1
+    found_successor_graph = ampeg._helpers.successor_graph(test_graph_1)
+    assert set(found_successor_graph.keys()) == set(successor_graph_1.keys())
+    for task_id in found_successor_graph:
+        assert set(found_successor_graph[task_id]) == \
+            set(successor_graph_1[task_id])
 
 
 def test_successor_graph_nested_dependencies():
@@ -57,5 +61,9 @@ def test_successor_graph_nested_dependencies():
     successor_graph = {('a', 0): [('sums', 0)],
                        ('b', 0): [('sums', 0)],
                        ('sums', 0): []}
-    assert ampeg._helpers.successor_graph(test_graph) == successor_graph
+    found_successor_graph = ampeg._helpers.successor_graph(test_graph)
+    assert set(found_successor_graph.keys()) == set(successor_graph.keys())
+    for task_id in found_successor_graph:
+        assert set(found_successor_graph[task_id]) == \
+            set(successor_graph[task_id])
 

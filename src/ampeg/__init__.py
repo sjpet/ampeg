@@ -51,4 +51,47 @@ from ._execution import execute_task_lists
 from ._helpers import to_dot
 
 name = "ampeg"
-__version__ = "0.1.4"
+__version__ = "0.2.0"
+
+
+def run(graph,
+        n_processes,
+        output_tasks=None,
+        timeout=None,
+        inflate=False,
+        costs=False):
+    """Schedule and execute tasks in a computation graph.
+
+    Parameters
+    ----------
+    graph : Dict[Hashable, Tuple[Callable, Any, float]]
+        A directed acyclic graph representing the computations where each
+        vertex represents a computationl task. The graph is represented by a
+        dict with task IDs as keys and tuples of (function, arguments,
+        computational cost) as values. Edges are implied by ``Dependency``
+        instances among arguments.
+    n_processes : int
+        Number of processes to use for execution.
+    output_tasks: List[Hashable], optional
+        A list of output tasks. Default is None, which considers all tasks to
+        be output tasks.
+    timeout : float, optional
+        Optional timeout in seconds, default is no timeout.
+    inflate : bool, optional
+        Inflate tuple keys in the results if True. Default is False.
+    costs : bool, optional
+        Include approximate costs if True. Default is False.
+
+    Returns
+    -------
+    List[Union[(Any, Number), (Any,)]]
+        A list of results
+    """
+    return execute_task_lists(*earliest_finish_time(graph,
+                                                    n_processes,
+                                                    output_tasks=output_tasks,
+                                                    timeout=timeout),
+                              inflate=inflate,
+                              costs=costs,
+                              timeout=timeout)
+

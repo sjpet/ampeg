@@ -24,6 +24,13 @@ from .data import (test_graph_1,
                    results_2_timeout)
 
 
+class ArbitraryObject(object):
+    
+    def __init__(self, attr1, attr2):
+        self.attr1 = attr1
+        self.attr2 = attr2
+
+
 # DependencyError test
 
 def test_dependency_error_default():
@@ -38,6 +45,18 @@ def test_dependency_error_default():
 def test_expand_recursively_nested_iterable():
     results = [None, [5]]
     keys = (1, 0)
+    assert ampeg._execution.expand_recursively(results, keys) == 5
+
+
+def test_expand_recursively_nested_iterable_object_attributes():
+    results = [None, ArbitraryObject(4, 5)]
+    keys = (1, "attr2")
+    assert ampeg._execution.expand_recursively(results, keys) == 5
+
+
+def test_expand_recursively_nested_iterable_object_attributes():
+    results = ArbitraryObject([1, 3, 5, 7], "irrelevant")
+    keys = ("attr1", 2)
     assert ampeg._execution.expand_recursively(results, keys) == 5
 
 
@@ -65,10 +84,28 @@ def test_expand_args_iterable_index():
     assert ampeg._execution.expand_args(args, results) == (9,)
 
 
+def test_expand_args_attribute():
+    results = [(None,), (None,), (ArbitraryObject(9, -1,),)]
+    args = (ampeg.Dependency(2, "attr1"),)
+    assert ampeg._execution.expand_args(args, results) == (9,)
+
+
 def test_expand_args_nested_keys():
     results = [(None,), (None,), ({'a': [8, 9, 10]},)]
     args = (ampeg.Dependency(2, ('a', 2)),)
     assert ampeg._execution.expand_args(args, results) == (10,)
+
+
+def test_expand_args_nested_keys_with_attribute_last():
+    results = [(None,), (None,), ({'a': ArbitraryObject(6, 10)},)]
+    args = (ampeg.Dependency(2, ('a', "attr2")),)
+    assert ampeg._execution.expand_args(args, results) == (10,)
+
+
+def test_expand_args_nested_keys_with_attribute_first():
+    results = [(None,), (None,), (ArbitraryObject({'a': 4}, 10),)]
+    args = (ampeg.Dependency(2, ("attr1", 'a')),)
+    assert ampeg._execution.expand_args(args, results) == (4,)
 
 
 def test_expand_args_no_dependency():

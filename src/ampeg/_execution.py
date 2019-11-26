@@ -38,22 +38,23 @@ def expand_args(args, results):
 
     def f(x):
         if isinstance(x, Dependency):
-            if isinstance(results[x.task_id][0], Err):
-                raise DependencyError.default(results[x.task_id][0])
-            elif x[1] is None:
-                r = results[x.task_id][0]
+            task_result = results[x.task_id][0]
+            if isinstance(task_result, Err):
+                raise DependencyError.default(task_result)
+
+            if x.key is None:
+                r = task_result
             elif is_iterable(x.key):
-                r = expand_recursively(results[x.task_id][0], x.key)
+                r = expand_recursively(task_result, x.key)
             else:
-                r = results[x.task_id][0][x.key]
+                r = get_any(task_result, x.key)
 
             if isinstance(r, Err):
                 raise DependencyError.default(r)
 
             return r
 
-        else:
-            return x
+        return x
 
     return recursive_map(f, args)
 
@@ -77,9 +78,9 @@ def expand_recursively(result, keys):
     if keys:
         next_key = keys[0]
         if len(keys) > 1:    # Only recurse if necessary
-            return expand_recursively(result[next_key], keys[1:])
+            return expand_recursively(get_any(result, next_key), keys[1:])
         else:
-            return result[next_key]
+            return get_any(result, next_key)
     else:
         return result
 
@@ -350,3 +351,25 @@ def execute_task_lists(task_lists,
             results_[costs_key] = costs_dict(results, task_ids)
 
     return results_
+
+
+def get_any(x, key):
+    """Get a value from an object by attribute name, key or index.
+
+    Parameters
+    ----------
+    x : Any
+    key : Hashable
+
+    Returns
+    -------
+    Any
+    """
+    try:
+        return x[key]
+    except (TypeError, IndexError, KeyError) as e:
+        if isinstance(key, str) and hasattr(x, key):
+            return x.__dict__[key]
+        
+        raise e
+
